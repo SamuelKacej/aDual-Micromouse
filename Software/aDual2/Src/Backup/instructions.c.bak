@@ -1,0 +1,483 @@
+/*
+ * instructions.c
+ *
+ *  Created on: Feb 20, 2020
+ *      Author: xkacejs
+ */
+
+
+#include "instructions.h"
+
+
+
+void INSTR_FillHalfList( uint8_t calcHalf ){
+
+	// calcHalf - set which half (first or second) will be filled with instraction
+	// always fill just one half of list, because other half is processed by  motor controler
+
+	INSTR_INSTRUCTION* insList = &INSTR_InstrList[(calcHalf)? INSTR_LIST_HALF_SIZE :0];
+	// pointer to first or second half of list
+
+	const uint16_t usedInstruction = INSTR_CmdToInstr( CMD_commandList, &INSTR_CommandListIndex, insList );
+	INSTR_InstrListUsedInstr[calcHalf] = usedInstruction;
+
+}
+
+float INSTR_Jerk(float angle, float time){
+	// angle - angle of arc
+	// time - is totoal time for arc
+	// triple integral of angle in time
+
+	return angle/(2*(time*time*time));
+
+}
+
+float INSTR_CalcAccel(uint16_t vStart, uint16_t vTarget, uint16_t distance){
+	/* mm/s/s =( mm/s, mm/s, mm)
+	 * Calculate acceleration for speedup from vStart to vTarget, on  given distance
+	 */
+	return ((int16_t)(vTarget - vStart)) / (2* distance/(vStart+vTarget));
+
+}
+float INSTR_CalcDist(uint16_t vStart, uint16_t vTarget, uint16_t accel){
+	// return distance traveled until you accelerate from vStart to vTarg
+	const float time = (vTarget-vStart)/accel;
+	return time*(vTarget+vStart)/2;
+}
+float INSTR_CalcVel(uint16_t vStart, uint16_t dist, uint16_t accel){
+	return sqrt(vStart*vStart + accel*dist*2);
+}
+
+void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius, uint16_t transVelocity, CMD_T command ){
+
+
+	/*
+	 * insList	- pointer from which will be instructions add
+	 * angleDeg - ± angle in degrees at the end of arc, anti-clock wise orientation
+	 * radius 	- radius of circle in mm
+	 *
+	 * Angle is S-curve
+	 *
+	 *
+	 *
+	 *  ^
+	 *  | [d a/dt] Jerk
+	 *  |
+	 *  |   ____+J		  ____
+	 *  |__|....|........|....|_____...0
+	 *  |       |________|-J
+	 *  |
+	 *  --------------------------------> [t]
+	 *
+	 * online calculation:
+	 * https://www.desmos.com/calculator/ozgpzddaye
+	 *
+	 *
+	 *	// W(omega) - angularVelociy
+	 *
+	 *	Najvacsia derivacia riadi, nizsie derivacie hovoria o ukoncovacich podmienkach
+	 *
+	 *
+	 */
+
+
+	const float angleRad = angleDeg*PI/180;
+	const float arcLength = radius*angleRad;  // mm
+
+
+	float timeArc; // seconds
+
+	if (radius != 0)
+		timeArc = arcLength/transVelocity; 		// Arc
+	else{
+		timeArc = angleRad * 180/ transVelocity;// in-place turn
+												// it will take same time as SS90deg turn
+		transVelocity = 0;						// no radius => no arc :)
+	}
+
+	const float t1 = timeArc/4; // time for one stage
+	// sign of jerk is defined by sign of angle
+	const float jerk = INSTR_Jerk(angleRad, t1);
+
+	//neviem ci by nemala mat znamienko iba najvacsia derivacia
+
+
+	INSTR_ResetInstrList(&(insList[0]), 4);
+
+	// state 1 ----------------------------
+	insList[0].command 		= command;
+	insList[0].trans.speed 	= transVelocity;
+	insList[0].trans.dist 	= arcLength/4;
+
+	insList[0].ang.jerk 	= jerk;
+	insList[0].ang.accel 	= jerk *t1;
+	insList[0].ang.speed 	= jerk*t1*t1/2;
+	insList[0].ang.dist 	= insList[0].ang.speed *t1/3;
+
+	// state 2 ----------------------------
+	insList[1].command 		= command;
+	insList[1].trans.speed 	= transVelocity;
+	insList[1].trans.dist 	= arcLength/4;
+
+	insList[1].ang.jerk 	= -1* jerk;
+	insList[1].ang.accel 	= 0;
+	insList[1].ang.speed 	= jerk *t1*t1;
+	insList[1].ang.dist 	= insList[1].ang.speed *t1 *2/3;
+
+	// state 3 ---------------------------
+	insList[2].command 		= command;
+	insList[2].trans.speed 	= transVelocity;
+	insList[2].trans.dist 	= arcLength/4;
+
+	insList[2].ang.jerk 	= -1* jerk;
+	insList[2].ang.accel 	= -1* jerk *t1;
+	insList[2].ang.speed 	= insList[0].ang.speed;
+	insList[2].ang.dist 	= insList[1].ang.dist;
+
+	// state 4 ---------------------------
+	insList[3].command 		= command;
+	insList[3].trans.speed 	= transVelocity;
+	insList[3].trans.dist 	= arcLength/4;
+
+	insList[3].ang.jerk 	= jerk;
+	insList[3].ang.accel 	= 0;
+	insList[3].ang.speed 	= 0;
+	insList[3].ang.dist 	= insList[0].ang.dist;
+
+
+
+}
+
+
+
+uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* insList){
+
+	/*
+	 * cmdList 	- is pointer to WHOLE command list!
+	 * idc 		- is index of element in cmdList from which translational will begin
+	 * insList	- is linked list of instruction which will be filled
+	 *
+	 * return	- corresponds to quantity of written instruction in to list
+	 */
+
+	uint16_t id = 0; //id in insList < 0 ; INSTR_LIST_SIZE>
+
+	INSTR_ResetInstrList(insList, INSTR_LIST_HALF_SIZE);
+
+	while ( *idc < CMD_LIST_SIZE){
+
+		if( id > (INSTR_LIST_HALF_SIZE - MAX_INSTRACTION_PER_COMMAND)){
+			return id;
+
+		}
+
+		switch(cmdList[*idc]){
+			// tu budu transitions
+			//v defaulte bude dia a straight
+
+			case CMD_STOP:
+					insList[id].trans.speed = 0;
+					insList[id].ang.speed = 0;
+					id++;
+				break;
+
+			//=============== TURNS ================
+			// expectted that robot is stating at place
+			case CMD_IP45R:
+				// first and last instructions are empty
+				id++;
+				INSTR_AddArc(&insList[id], -45, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=5;// 4(arc) +1(empty)
+
+				break;
+			//--------------------------------------
+			case CMD_IP45L:
+				// first and last instructions are empty
+				id++;
+				INSTR_AddArc(&insList[id], +45, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=5;// 4(arc) +1(empty)
+
+				break;
+			//--------------------------------------
+			case CMD_IP90R:
+				// first and last instructions are empty
+				id++;
+				INSTR_AddArc(&insList[id], -90, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=5;// 4(arc) +1(empty)
+
+				break;
+			//--------------------------------------
+			case CMD_IP90L:
+				// first and last instructions are empty
+				id++;
+				INSTR_AddArc(&insList[id], +90, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=5;// 4(arc) +1(empty)
+
+				break;
+			//--------------------------------------
+			case CMD_IP135R:
+				// first and last instructions are empty
+				id++;
+				INSTR_AddArc(&insList[id], -135, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=5;// 4(arc) +1(empty)
+
+				break;
+			//--------------------------------------
+			case CMD_IP135L:
+				// first and last instructions are empty
+				id++;
+				INSTR_AddArc(&insList[id], +135, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=5;// 4(arc) +1(empty)
+
+				break;
+			//--------------------------------------
+			case CMD_IP180R:
+				// first and last instructions are empty
+				id++;
+				INSTR_AddArc(&insList[id], -180, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=5;// 4(arc) +1(empty)
+
+				break;
+			//--------------------------------------
+			case CMD_IP180L:
+				// first and last instructions are empty
+				id++;
+				INSTR_AddArc(&insList[id], +180, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=5;// 4(arc) +1(empty)
+
+				break;
+
+
+			//=========== TRANSITIONS ==============
+			case CMD_SS90SR:
+				INSTR_AddArc(&insList[id], -90, 90, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+			case CMD_SS90SL:
+				INSTR_AddArc(&insList[id], 90, 90, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+			case CMD_SS180R:
+				INSTR_AddArc(&insList[id], -180, 90, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+			case CMD_SS180L:
+				INSTR_AddArc(&insList[id], 180, 90, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+
+			case CMD_SD45R:
+				INSTR_AddArc(&insList[id], -45, 83, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+			case CMD_SD45L:
+				INSTR_AddArc(&insList[id], 45, 83, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+			case CMD_SD135R:
+				INSTR_AddArc(&insList[id], -135, 76, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+			case CMD_SD135L:
+				INSTR_AddArc(&insList[id], 135, 76, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+
+			//--------------------------------------
+			case CMD_DS45R:
+				// diagonalna zatacka
+				INSTR_AddArc(&insList[id], -45, 83, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+			case CMD_DS45L:
+				INSTR_AddArc(&insList[id], 45, 83, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+			case CMD_DS135R:
+				//	https://www.desmos.com/calculator/frivebujta
+				INSTR_AddArc(&insList[id], -135, 76, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+			case CMD_DS135L:
+				//	https://www.desmos.com/calculator/frivebujta
+				INSTR_AddArc(&insList[id], 135, 76, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+			case CMD_DD90R:
+				// r = 45mm * sqrt(2)
+				INSTR_AddArc(&insList[id], -90, 64, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+			//--------------------------------------
+			case CMD_DD90L:
+				// r = 45mm * sqrt(2)
+				INSTR_AddArc(&insList[id], 90, 64, INSTR_AverageVelocity, cmdList[*idc]);
+				id +=4;// 4(arc)
+
+				break;
+
+
+			default:
+				//============== FORWARD ==============
+				if( cmdList[*idc] >=  CMD_FWD0 && cmdList[*idc] <= CMD_FWD15){
+
+					// forward N borders of cell
+					uint8_t nCells = cmdList[*idc] - CMD_FWD0;
+
+					if(nCells> 3){
+						// peak acceleration
+
+
+						// speed up
+						insList[id].command 	 = CMD_FWD1;
+						insList[id].trans.dist   = CELL_DIMENSION*SQRT2;
+						insList[id].trans.speed  = INSTR_CalcVel(INSTR_AverageVelocity,\
+													CELL_DIMENSION*SQRT2, INSTR_MaxTransAccel);
+						insList[id].trans.accel  = INSTR_MaxTransAccel;
+						id++;
+
+						// constV
+						const uint8_t cellsConstV = nCells-3;
+						// speed-up + speed-down + safeCell;
+
+						insList[id].command		 = CMD_FWD0 + cellsConstV;
+						insList[id].trans.dist   = CELL_DIMENSION*cellsConstV*SQRT2;
+						insList[id].trans.speed  = insList[id-1].trans.speed;
+						insList[id].trans.accel  = 0;
+						id++;
+
+						// slow-down
+						/*
+						 * FWD2 sa rata cez kolko hran musi prejst
+						 * */
+						insList[id].command 	 = CMD_FWD2;
+						insList[id].trans.dist   = 2*CELL_DIMENSION*SQRT2;
+						insList[id].trans.speed  = INSTR_AverageVelocity;
+						insList[id].trans.accel  = -INSTR_MaxTransAccel;
+						id++;
+
+
+					}else{
+						// const velocity
+
+						insList[id].command 	 = CMD_FWD0 + nCells;
+						insList[id].trans.dist   = nCells* CELL_DIMENSION*SQRT2;
+						insList[id].trans.speed  = INSTR_AverageVelocity;
+						insList[id].trans.accel  = 0;
+						id++;
+
+					}
+
+
+				//============== DIAGONAL ==============
+				}else if(cmdList[*idc] >=  CMD_DIA0 && cmdList[*idc] <= CMD_DIA31){
+
+					// diagonal N centers of cell
+					uint8_t nCells = cmdList[*idc] - CMD_DIA0;
+
+
+					// forward N borders of cell
+					if(nCells> 3){
+						//  1/2  peak acceleration
+
+
+						// speed up
+						insList[id].command		 = CMD_FWD1;
+						insList[id].trans.dist   = CELL_DIMENSION*SQRT2;
+						insList[id].trans.speed  = INSTR_CalcVel(INSTR_AverageVelocity,\
+													CELL_DIMENSION*SQRT2, INSTR_MaxTransAccel/2);
+						insList[id].trans.accel  = INSTR_MaxTransAccel/2;
+						id++;
+
+						// constV
+						const uint8_t cellsConstV = nCells-3;
+						// speed-up + speed-down + safeCell;
+
+						insList[id].command		 = CMD_FWD0 + cellsConstV;
+						insList[id].trans.dist   = CELL_DIMENSION*cellsConstV*SQRT2;
+						insList[id].trans.speed  = insList[id-1].trans.speed;
+						insList[id].trans.accel  = 0;
+						id++;
+
+						// slow-down
+						insList[id].command		 = CMD_FWD2;
+						insList[id].trans.dist   = 2*CELL_DIMENSION*SQRT2;
+						insList[id].trans.speed  = INSTR_AverageVelocity;
+						insList[id].trans.accel  = -INSTR_MaxTransAccel/2;
+						id++;
+
+
+					}else{
+						// const velocity
+
+						insList[id].command		 = CMD_FWD0 + nCells;
+						insList[id].trans.dist   = nCells*CELL_DIMENSION*SQRT2;
+						insList[id].trans.speed  = INSTR_AverageVelocity;
+						insList[id].trans.accel  = 0;
+						id++;
+
+					}
+
+
+				}else{
+					// ERROR
+				}
+
+
+		}// end of switch
+
+		idc++;
+
+	}// end of while
+
+	return id;
+
+}
+
+void INSTR_ResetInstrList(INSTR_INSTRUCTION* list, uint16_t length){
+	//function set every instruction in list to 0
+	for( uint16_t i=0  ; i< length ; i++){
+
+		list[i].command = CMD_STOP;
+
+		list[i].trans.dist 	 = 0;
+		list[i].trans.speed  = 0;
+		list[i].trans.accel  = 0;
+		list[i].trans.jerk   = 0;
+		list[i].trans.start  = 0;
+		list[i].trans.target = 0;
+		list[i].trans.counter= 0;
+
+		list[i].ang.dist 	 = 0;
+		list[i].ang.speed 	 = 0;
+		list[i].ang.accel 	 = 0;
+		list[i].ang.jerk  	 = 0;
+		list[i].ang.start 	 = 0;
+		list[i].ang.target 	 = 0;
+		list[i].ang.counter  = 0;
+	}
+}

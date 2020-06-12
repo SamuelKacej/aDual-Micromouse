@@ -1,0 +1,116 @@
+/*
+ * instructions.h
+ *
+ *  Created on: Feb 20, 2020
+ *      Author: xkacejs
+ */
+
+#ifndef INSTRUCTIONS_H_
+#define INSTRUCTIONS_H_
+
+#include "main.h"
+#include "command.h"
+#include "math.h"
+// thil lbr translate command to motor instruction and sensor
+// instructions should hav acceleration, statble, de accelerate
+
+
+/*
+ * Orthogonal movement stops at N border of cell
+ * Orthogonal movement starts at border between two cells
+ *
+ * Diagonal movement stops at N diagonal of cell
+ * Diagonal movement starts at diagonal of cell
+ *
+ * ___O___
+ *|\     /|
+ *| D   D |
+ *|  \ /  |
+ *O   X   O
+ *|  / \  |
+ *| D   D |
+ *|/__O__\|
+ * 											    <-
+ * Positive angle orientation is anti clockwise __|
+ *
+ * In proccesing every instruction function will calculate
+ *  if the function need to accelerate to get to the target in the time
+ * */
+
+#define INSTR_LIST_HALF_SIZE 16
+
+#define CELL_DIMENSION 180 //mm
+#define PI 3.1416
+#define SQRT2 1.4142
+#define MAX_INSTRACTION_PER_COMMAND 6
+#define SIGNUM(a) (( (a)<0 )? -1 : 1)
+
+uint16_t INSTR_VelocityPeak	 	;	// mm/s , < 1000 ; 3500 > Translational
+uint16_t INSTR_AverageVelocity  ; 	// mm/s , <  250 ; 1500 > Translational
+
+uint8_t INSTR_MaxAngularAccel 	;	// rad/s/s
+uint16_t INSTR_MaxTransAccel 	;	// mm/ws    1 g =~ 9807mm/s
+
+float INSTR_MaxAngVelocity 		;	// rad/s
+float INSTR_DefaultAngAccel 	;	// in place turn acceleration
+
+typedef struct _INSTRUCTION_{
+
+	//size is around 50 B
+	CMD_T command;
+
+	struct _INS{
+
+		// dividing float uses 14 cycles
+								   //signum of distance set ± direction for accel and speed
+		float		dist;		// mm or rad 		- ± distance/angle wanted to travel/turn
+		float 		speed;		// mm or rad /s		- + sets target velocity
+		float		accel;		// mm or rad /s/s	- + set acceleration
+		float		jerk;		// rad /s/s/s		- + set jerk
+
+		// ussed for synchronization
+		// second highes non null derivation
+		float 		start; 		// mm or rad		- start distance/angle
+		float 		target;		// mm or rad		- finish distance/angle at end of instruction
+
+
+		float 		counter;	// sum jerk = accel
+								// accel from fb is not good, so we create on on our own
+
+		/*
+		 *
+		 * Highest non Null SET derivation set increments
+		 * lower derivation is ussed for synchronization
+		 */
+
+
+	}trans, ang;
+
+	//struct _INSTRUCTION_* next;
+
+
+}INSTR_INSTRUCTION;
+
+
+INSTR_INSTRUCTION INSTR_InstrList[2*INSTR_LIST_HALF_SIZE];
+uint8_t INSTR_InstrListUsedInstr[2];	//how many of InstrList is calculated
+uint16_t INSTR_CommandListIndex;		// define from which ID wil be comands tgranslated
+
+void INSTR_FillHalfList( uint8_t );
+	// motion control shoud call this function
+	// to update half of the list (0 or 1)
+
+uint16_t INSTR_CmdToInstr( CMD_T* , uint16_t* , INSTR_INSTRUCTION*);
+	// wite max INSTR_LIST_SIZE to list
+	// return number of written instractions
+
+void INSTR_ResetInstrList(INSTR_INSTRUCTION* , uint16_t);
+
+float INSTR_CalcAccel(uint16_t vStart, uint16_t vTarget, uint16_t distance);
+
+
+void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius,\
+		uint16_t transVelocity, CMD_T command );
+
+
+#endif /* INSTRUCTIONS_H_ */

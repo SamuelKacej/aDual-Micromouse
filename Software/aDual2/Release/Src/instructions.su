@@ -1,0 +1,7 @@
+instructions.c:26:7:INSTR_CalcAccel	0	static
+instructions.c:33:7:INSTR_CalcDist	0	static
+instructions.c:38:7:INSTR_CalcVel	8	static
+instructions.c:42:6:INSTR_AddArc	24	static
+instructions.c:87:10:INSTR_CmdToInstr	80	static
+instructions.c:13:6:INSTR_FillHalfList	8	static
+instructions.c:379:6:INSTR_ResetInstrList	0	static

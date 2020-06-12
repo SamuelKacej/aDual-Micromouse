@@ -1,0 +1,16 @@
+sensors.c:361:13:SENSOR_FilterResetFloat	0	static
+sensors.c:41:6:SENSORS_Init	16	static
+sensors.c:72:9:SENSORS_test_i2c	24	static
+sensors.c:145:6:SENSORS_GyroUpdateValues	16	static
+sensors.c:231:9:SENSORS_irVal2dist	96	static
+sensors.c:252:6:SENSORS_irRead	4	static
+sensors.c:264:6:SENSORS_AdcCallback	0	static
+sensors.c:276:6:SENSORS_EncoderUpdateValues	48	static
+sensors.c:308:6:SENSORS_EncoderTimCallback	0	static
+sensors.c:333:6:SENSOR_FilterAdd	0	static
+sensors.c:338:10:SENSOR_FilterGet	0	static
+sensors.c:151:6:SENSORS_AdcUpdateValues	56	static
+sensors.c:347:6:SENSOR_FilterAddFloat	0	static
+sensors.c:352:7:SENSOR_FilterGetFloat	0	static
+sensors.c:98:6:SENSORS_vectorsCalc	48	static
+sensors.c:80:6:SENSORS_Update	8	static

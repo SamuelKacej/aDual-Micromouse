@@ -1,0 +1,7 @@
+motor.c:12:6:MOTOR_ControllerReset	0	static
+motor.c:27:6:MOTOR_INIT	12	static
+motor.c:54:6:MOTOR_ControllerSet	0	static
+motor.c:63:16:MOTOR_ControllerUpdate	0	static
+motor.c:93:6:MOTOR_SetVoltage	16	static
+motor.c:125:6:MOTOR_SetMoment	16	static
+motor.c:142:6:MOTOR_SetVelocity	16	static

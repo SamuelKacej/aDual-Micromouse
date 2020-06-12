@@ -1,0 +1,5 @@
+command.c:11:6:CMD_clearList	0	static
+command.c:34:9:CMD_DirectionRotate	0	static
+command.c:59:9:CMD_DirectionMazeToCmd	0	static
+command.c:18:6:CMD_AbsolutePathToRelative	24	static
+command.c:74:6:CMD_PathToCommand	32	static

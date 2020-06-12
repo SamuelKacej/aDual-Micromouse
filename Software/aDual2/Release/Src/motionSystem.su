@@ -1,0 +1,7 @@
+motionSystem.c:17:6:MOTION_Init	40	static
+motionSystem.c:55:6:MOTION_Update	56	static
+motionSystem.c:83:6:MOTION_UpdateList	8	static
+motionSystem.c:219:6:MOTION_ChcekForNewInstraction	16	static
+motionSystem.c:261:6:MOTION_resetList	4	static
+motionSystem.c:275:6:MOTION_uTurnTest	32	static
+motionSystem.c:353:6:MOTION_SetVelocity	16	static
