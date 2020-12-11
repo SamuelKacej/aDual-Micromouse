@@ -55,10 +55,17 @@ void SENSORS_Init(){
 	HAL_TIM_Base_Start_IT(&SENSORS_HTIM_ENC_R);
 	htimEnc[SENSORS_MOTOR_L] = &SENSORS_HTIM_ENC_L;
 	htimEnc[SENSORS_MOTOR_R] = &SENSORS_HTIM_ENC_R;
+	SENSOR_FilterResetFloat(&filterDistanceLeft);
+	SENSOR_FilterResetFloat(&filterDistanceRight);
 
+
+	encoderCarryCnt[0] = 0;
+	encoderCarryCnt[1] = 0;
 
 	// gyro init
 	bno055_init(&SENSORS_HI2C, OPERATION_MODE_NDOF);
+
+
 
 }
 
@@ -131,7 +138,7 @@ void SENSORS_vectorsCalc(){
 	SENSORS_angleJerk 	= newAngleJerk;
 
 
-	printf("@ %i @ \r\n", (int)SENSORS_transPos);
+	//printf("@ %.2f\t %.2f\t \r\n", distR0, distL0);
 
 }
 
@@ -163,8 +170,8 @@ void SENSORS_AdcUpdateValues(){
 	// get system clock
 	uint32_t clk_start = MAIN_GetMicros();
 	// turn on light
-	HAL_GPIO_WritePin(GPIO_IR_LED1_GPIO_Port, GPIO_IR_LED1_Pin,  GPIO_PIN_SET);		//wait 20us to rise
-	// wait 20us
+	HAL_GPIO_WritePin(GPIO_IR_LED1_GPIO_Port, GPIO_IR_LED1_Pin,  GPIO_PIN_SET);
+
 	while ((MAIN_GetMicros() - clk_start) < uHalfPeriodOfLight);
 
 
@@ -220,32 +227,7 @@ void SENSORS_AdcUpdateValues(){
 
 }
 
-float _minus2pow(float x){
-	// linear aproximation of (x)^(-2)
-// todo from -x to 600
 
-	if(x<0) x*=-1;
-
-
-	if(x<1	) 	return -x*3.5		+4.4;
-	if(x<1.6)	return -x*1.7		+2.7;
-	if(x<1.4)	return -x*1			+1.9;
-	if(x<1.8)	return -x*0.5		+1.2;
-	if(x<2.1)	return -x*0.275		+0.8;
-	if(x<2.3)	return -x*0.18		+0.6;
-	if(x<2.9)	return -x*0.123		+0.47;
-	if(x<3.6)	return -x*0.06		+0.29;
-	if(x<5  )	return -x*0.0287	+0.179;
-	if(x<6.6)	return -x*0.0133	+0.107;
-	if(x<10 )	return -x*0.0036	+0.045;
-	if(x<17 )	return -x*0.001		+0.02;
-	if(x<22 )	return -x*0.00025	+0.0077;
-	if(x<28 )	return -x*0.000135	+0.005;
-	if(x<37 )	return -x*0.000063	+0.003;
-
-	else return 0; // e^9 ~=10k
-
-}
 uint8_t SENSORS_irVal2dist( uint16_t val, uint8_t id){
 	// return value is in mm
 
@@ -254,8 +236,6 @@ uint8_t SENSORS_irVal2dist( uint16_t val, uint8_t id){
 	const float C[6] = {1158, 144, 774, 541, 608, 783};
 
 	const float tmp = (val-C[id])/B[id];
-	//TODO : linearization of ^-2
-	// 6*pow takes around 180 us
 	const float  distance = A[id] / (tmp*tmp);
 
 	if(distance < 0 )
@@ -347,6 +327,9 @@ void SENSORS_EncoderTimCallback(TIM_HandleTypeDef *htim){
 
 }
 
+
+
+
 void SENSOR_FilterAdd(uint16_t data, SENSOR_FILTER* filter){
 	filter->data[filter->id] = data;
 	filter->id++;
@@ -375,3 +358,8 @@ float SENSOR_FilterGetFloat(SENSOR_FILTER_Float* filter){
 	return cnt/SENSOR_FILTER_LENGTH;
 }
 
+static void SENSOR_FilterResetFloat(SENSOR_FILTER_Float* filter){
+		for(int i=0; i< SENSOR_FILTER_LENGTH ; i++)
+			filter->data[i]=0;
+
+}

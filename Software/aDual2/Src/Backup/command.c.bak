@@ -17,40 +17,64 @@ void CMD_clearList(){
 
 void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS* abosoluteList, CMD_DIRECTIONS_T* relativeList ){
 	// translate absolute direction made by floodfill to realative list
-	// reference direction will be direction in cell previous
+	// reference direction will be direction from  previous cell
 
 	int8_t lastRotation = 0;
-	int8_t dir;
+
 
 	for( uint16_t i = 0 ; i < MAZE_PATH_SIZE ; i++ ){
 
-		dir =  CMD_DirectionMazeToCmd( abosoluteList[i].absoluteDirection) -2;
-		relativeList[i] = (dir - lastRotation + 2)%4 ;
-		lastRotation = dir;
+		const int8_t dir =  CMD_DirectionMazeToCmd( abosoluteList[i].absoluteDirection);
+		relativeList[i] = CMD_DirectionRotate(dir, &lastRotation );
+
 	}
 
 }
 
+uint8_t CMD_DirectionRotate(int8_t dir,	int8_t* rotation){
+
+	/*	Rotate absolut comand coordiance by given rotation,
+	 * return relative direction
+	 * return *rotation new rotation.
+	 * 			_2_
+	 * 		 1 | 0 |3
+	 * 			-4-
+	 */
+
+	if(dir == 0x00)
+		return CMD_S;
+
+	// +4 to move it in possitive integers
+	const uint8_t command = (dir+*rotation + 4)%4;
+	*rotation = 2-dir;
+
+	// move command is from <1;4>
+	if (command == 0 )
+		return 4;
+	else
+		return command;
+
+
+}
 uint8_t CMD_DirectionMazeToCmd(uint8_t dir){
+// translate ABSOLUET maze coordinace to ABSOLUTE command cordinance
+	if(dir == 0x00) return CMD_S;//0
 
-	if(dir == 0x00) return CMD_S;
+	if(dir == 0x01) return CMD_B;//4
 
-	if(dir == 0x01) return CMD_B;
+	if(dir == 0x02) return CMD_R;//1
 
-	if(dir == 0x02) return CMD_L;
+	if(dir == 0x04) return CMD_F;//2
 
-	if(dir == 0x04) return CMD_F;
-
-	if(dir == 0x08) return CMD_R;
+	if(dir == 0x08) return CMD_L;//3
 
 	return 0xFF;
 }
 
 void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 
-	// input directions must be realtive
-	// source of state machine diagram:
-	// http://www.micromouseonline.com/2014/05/05/diagonal-paths-micromouse-using-state-machine/
+	// input directions must be realative
+	// state machine
 
 	uint8_t x = 0;
 	uint8_t state = CMD_STATE_START;

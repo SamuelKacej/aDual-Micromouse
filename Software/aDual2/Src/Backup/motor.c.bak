@@ -9,42 +9,42 @@
 #include "motor.h"
 
 
-void MOTOR_ControllerReset(PID_CONTROLLER pid){
+void MOTOR_ControllerReset(PID_CONTROLLER* pid){
 
 
-	pid.E = 0;
-	pid.E_Prev = 0;
-	pid.E_Sum = 0;
+	pid->E = 0;
+	pid->E_Prev = 0;
+	pid->E_Sum = 0;
 
-	pid.W = 0;
-	pid.FB = 0;
-	pid.U = 0;
+	pid->W = 0;
+	pid->FB = 0;
+	pid->U = 0;
 
-	pid.b = 1;
-	pid.c = 1;
+	pid->b = 1;
+	pid->c = 1;
 
 }
 void MOTOR_INIT(){
 	// set structure of controllers
 
 	// output is required current
-	MOTOR_ControllerReset(MOTOR_currentController[MOTOR_ML]);
+	MOTOR_ControllerReset(&MOTOR_currentController[MOTOR_ML]);
 	MOTOR_currentController[MOTOR_ML].Tx =0;
 	MOTOR_currentController[MOTOR_ML].maxU = +255;
 	MOTOR_currentController[MOTOR_ML].minU = -255;
 
-	MOTOR_ControllerReset(MOTOR_currentController[MOTOR_MR]);
+	MOTOR_ControllerReset(&MOTOR_currentController[MOTOR_MR]);
 	MOTOR_currentController[MOTOR_MR].Tx = 0;
 	MOTOR_currentController[MOTOR_MR].maxU = +255;
 	MOTOR_currentController[MOTOR_MR].minU = -255;
 
 	// output is requred moment
-	MOTOR_ControllerReset(MOTOR_velocityController[MOTOR_ML]);
+	MOTOR_ControllerReset(&MOTOR_velocityController[MOTOR_ML]);
 	MOTOR_velocityController[MOTOR_ML].Tx = 0;
 	MOTOR_velocityController[MOTOR_ML].maxU = +0.005;
 	MOTOR_velocityController[MOTOR_ML].minU = -0.005;
 
-	MOTOR_ControllerReset(MOTOR_velocityController[MOTOR_MR]);
+	MOTOR_ControllerReset(&MOTOR_velocityController[MOTOR_MR]);
 	MOTOR_velocityController[MOTOR_MR].Tx = 0;
 	MOTOR_velocityController[MOTOR_MR].maxU = +0.005;
 	MOTOR_velocityController[MOTOR_MR].minU = -0.005;
@@ -131,7 +131,7 @@ void MOTOR_SetMoment(uint8_t motorSelect, float requiredMoment ){
 	if(requiredMoment == 0)
 		tmpU = 0;
 	else
-		tmpU = MOTOR_ControllerUpdate(&MOTOR_currentController[motorSelect], \
+		 tmpU = MOTOR_ControllerUpdate(&MOTOR_currentController[motorSelect], \
 				requiredCurrent, ((float)SENSORS_motorI[motorSelect])/1000);	// mA->A
 
 	MOTOR_SetVoltage(motorSelect, tmpU);
@@ -141,6 +141,8 @@ void MOTOR_SetMoment(uint8_t motorSelect, float requiredMoment ){
 
 void MOTOR_SetVelocity(uint8_t motorSelect, float requiredVelocity){
 
+	// TODO ADAPTIVE Controller
+
 	MOTOR_ControllerUpdate(&MOTOR_velocityController[motorSelect], \
 			requiredVelocity, SENSORS_velocity[motorSelect]);
 
@@ -149,6 +151,13 @@ void MOTOR_SetVelocity(uint8_t motorSelect, float requiredVelocity){
 
 	}
 	MOTOR_SetMoment(motorSelect, MOTOR_velocityController[motorSelect].U);
+
+	if(motorSelect = 1)
+	printf(" %i,\t %.2f, \t %.2f, \t %.2f, \t %.2f, \t %.2f\n\r",\
+				MAIN_GetMicros()/1000, requiredVelocity,  MOTOR_velocityController[0].FB,\
+				 MOTOR_velocityController[0].U*1000, MOTOR_currentController[0].FB*1000,\
+				 MOTOR_currentController[0].U);
+
 	//MOTOR_SetVoltage(motorSelect, MOTOR_velocityController[motorSelect].U);
 
 }

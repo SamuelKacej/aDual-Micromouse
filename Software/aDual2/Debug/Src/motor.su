@@ -4,4 +4,4 @@ motor.c:54:6:MOTOR_ControllerSet	0	static
 motor.c:63:16:MOTOR_ControllerUpdate	0	static
 motor.c:93:6:MOTOR_SetVoltage	16	static
 motor.c:125:6:MOTOR_SetMoment	8	static
-motor.c:142:6:MOTOR_SetVelocity	72	static
+motor.c:142:6:MOTOR_SetVelocity	16	static

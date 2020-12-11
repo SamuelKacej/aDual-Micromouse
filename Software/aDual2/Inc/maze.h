@@ -52,6 +52,8 @@ extern uint8_t MAZE_wasChanged;
 // 1 if maze was change
 // 0 by default or if user change value;
 
+
+//TODO: wall/absoluteDirection enum with 0x0000 WNES
 typedef struct
 {
 	uint8_t wall; 	// b0000 DCBA

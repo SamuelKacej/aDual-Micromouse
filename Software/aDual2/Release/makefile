@@ -17,6 +17,12 @@ RM := rm -rf
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(strip $(S_DEPS)),)
+-include $(S_DEPS)
+endif
+ifneq ($(strip $(S_UPPER_DEPS)),)
+-include $(S_UPPER_DEPS)
+endif
 ifneq ($(strip $(C_DEPS)),)
 -include $(C_DEPS)
 endif
@@ -42,8 +48,8 @@ aDual2.bin \
 all: aDual2.elf secondary-outputs
 
 # Tool invocations
-aDual2.elf: $(OBJS) $(USER_OBJS) C:\Users\xkacejs\Documents\STMicroelectronics\projects\aDual2\STM32F405RGTX_FLASH.ld
-	arm-none-eabi-gcc -o "aDual2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\xkacejs\Documents\STMicroelectronics\projects\aDual2\STM32F405RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="aDual2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+aDual2.elf: $(OBJS) $(USER_OBJS) C:\Users\samok\Documents\GitHub\aDual-Micromouse\Software\aDual2\STM32F405RGTX_FLASH.ld
+	arm-none-eabi-gcc -o "aDual2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\samok\Documents\GitHub\aDual-Micromouse\Software\aDual2\STM32F405RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="aDual2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

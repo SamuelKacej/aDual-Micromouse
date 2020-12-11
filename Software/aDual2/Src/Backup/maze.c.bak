@@ -15,6 +15,7 @@ void MAZE_writeCell(uint8_t address, uint8_t walls, uint8_t cost){
 	if(MAZE_maze[address].wall != walls){
 		MAZE_maze[address].wall = walls;
 		MAZE_wasChanged = 1;
+		//TODO write wall from other side
 	}
 	if( cost != 0xFF){
 		MAZE_maze[address].cost = cost;
@@ -49,6 +50,7 @@ void MAZE_floodfill( MAZE_CELL* maze, MAZE_DIRECTIONS* path, uint8_t fromCell, u
 	{
 
 
+		// ohodnoti susedne bunky poslednych hodnotenych
 		for(uint16_t i = 0; i < cellsInMaze ; i++){
 
 			//was this cell edited in last iteration?
@@ -63,16 +65,21 @@ void MAZE_floodfill( MAZE_CELL* maze, MAZE_DIRECTIONS* path, uint8_t fromCell, u
 	}
 
 	//back propagation
+	// begin at finish and find cheapest neighbor... until u come to start
 	MAZE_CELL* pMazeCell = &maze[toCell];
 	uint8_t direction = 0;
+
 	for(uint16_t i = 255; i>=0 ;i--){
 
 		MAZE_path[i].cell = pMazeCell;
 		MAZE_path[i].absoluteDirection = MAZE_reverseDirection(direction);
 
+		// if u  are at the start
 		if(pMazeCell->address== fromCell){
 
 
+			// This remove empty directions at begin of array
+			// ... maze_path was filled from the end 255->0
 			if(i>0)
 			for(uint16_t j = 0; j < 256  ; j++){
 
@@ -85,8 +92,6 @@ void MAZE_floodfill( MAZE_CELL* maze, MAZE_DIRECTIONS* path, uint8_t fromCell, u
 			break;
 		}
 
-
-
 		pMazeCell = MAZE_findCheapestNeighbor(pMazeCell, &direction);
 
 
@@ -97,8 +102,11 @@ void MAZE_floodfill( MAZE_CELL* maze, MAZE_DIRECTIONS* path, uint8_t fromCell, u
 uint8_t MAZE_reverseDirection(uint8_t dir){
 	// switch two pairs of bits
 	/*
-	 * 0bXXXXABCD -> 0b0000CDAB
-	 *
+	 * 0bXXXXDCAB -> 0b0000BADC
+	 * up to down
+	 * down to up
+	 * left to right
+	 * right to left
 	 * */
 	dir &= 0xF;
 	return (dir<<2 | dir>>2) & 0xF;
@@ -108,7 +116,7 @@ MAZE_CELL* MAZE_findCheapestNeighbor(MAZE_CELL* mazeCell, uint8_t* direction){
 	//mazeCell - pointer to maze cell
 	//direction - address at which will be store direction to cheapest neighbor
 
-	uint8_t addrX = mazeCell->address & 0xF0;
+	uint8_t addrX = (mazeCell->address & 0xF0)>>4;
 	uint8_t addrY = mazeCell->address &0x0F;
 	MAZE_CELL* tmp;
 	MAZE_CELL* resoult = mazeCell; // return value
@@ -116,11 +124,14 @@ MAZE_CELL* MAZE_findCheapestNeighbor(MAZE_CELL* mazeCell, uint8_t* direction){
 
 	// is the wall the boarder wall?
 	// get neighbor cell
-	// is wall between origin cell and neighbor cell?
+	// is NOT wall between origin cell and neighbor cell?
 	// and is neighbor cell cheaper then cheapest cell?
 	// then return pointer to cheapest cell and store direction in &direction
+
+	// COMPILER SHOULD AUTOMATICLE move pointer by size of struct!!
+
 	if (addrY-1 >= 0){
-		tmp = mazeCell  - sizeof(MAZE_CELL); // [addrX][addrY-1];
+		tmp = mazeCell - 1; //- sizeof(MAZE_CELL); // [addrX][addrY-1];
 		if( (mazeCell->wall & 0b0001)==0 && tmp->cost < resoult->cost ){
 			resoult = tmp ;
 			*direction = 0b1;
@@ -128,7 +139,7 @@ MAZE_CELL* MAZE_findCheapestNeighbor(MAZE_CELL* mazeCell, uint8_t* direction){
 	}
 
 	if (addrX+1 < MAZE_SIZE_X){
-		tmp = mazeCell + MAZE_SIZE_X*sizeof(MAZE_CELL); // [addrX+1][addrY];
+		tmp = mazeCell + MAZE_SIZE_X;//*sizeof(MAZE_CELL); // [addrX+1][addrY];
 		if( (mazeCell->wall & 0b0010)==0 && tmp->cost < resoult->cost ){
 			resoult = tmp;
 			*direction = 0b10;
@@ -136,7 +147,7 @@ MAZE_CELL* MAZE_findCheapestNeighbor(MAZE_CELL* mazeCell, uint8_t* direction){
 	}
 
 	if (addrY+1 < MAZE_SIZE_Y){
-		tmp = mazeCell + sizeof(MAZE_CELL); // [addrX][addrY+1];
+		tmp = mazeCell + 1;// sizeof(MAZE_CELL); // [addrX][addrY+1];
 		if( (mazeCell->wall & 0b0100)==0 && tmp->cost < resoult->cost ){
 			resoult = tmp;
 			*direction = 0b100;
@@ -144,7 +155,7 @@ MAZE_CELL* MAZE_findCheapestNeighbor(MAZE_CELL* mazeCell, uint8_t* direction){
 	}
 
 	if (addrX-1 >=0){
-		tmp = mazeCell - MAZE_SIZE_X*sizeof(MAZE_CELL); // [addrX-1][addrY];
+		tmp = mazeCell - MAZE_SIZE_X;//*sizeof(MAZE_CELL); // [addrX-1][addrY];
 		if( (mazeCell->wall & 0b1000)==0 && tmp->cost < resoult->cost ){
 			resoult = tmp;
 			*direction = 0b1000;
@@ -160,7 +171,7 @@ void MAZE_SetCostOfNeighbors(MAZE_CELL* maze, uint8_t addr){
 	//maze - pointer to maze
 	// addr - address of cell around which we will set cost
 
-	uint8_t addrX = 0xF0 & addr;
+	uint8_t addrX = (0xF0 & addr)>>4;
 	uint8_t addrY = 0x0F & addr;
 	uint8_t setCost = maze[addr].cost+1;
 
@@ -188,6 +199,7 @@ void MAZE_ClearMaze(MAZE_CELL* maze){
 
 			maze[MAZE_ADDR(i,j)].cost = 0;
 			maze[MAZE_ADDR(i,j)].wall = 0;
+			maze[MAZE_ADDR(i,j)].address = MAZE_ADDR(i,j);
 
 			// borders
 			if( i == 0)

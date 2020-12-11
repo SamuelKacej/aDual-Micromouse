@@ -1,0 +1,126 @@
+/*
+ * sensors.h
+ *
+ *  Created on: Feb 12, 2020
+ *      Author: xkacejs
+ */
+
+#ifndef SENSORS_H_
+#define SENSORS_H_
+/*
+ *
+ * This lbr contains initial configuration and comunication chanal for and updating function for
+ * ADC:
+ * IR sensors
+ * battery voltage
+ * motor current sensors
+ *
+ * Encoders
+ *
+ * Gyro with eular angles
+ *
+ */
+
+#include "stm32f4xx_hal.h"
+#include "main.h"
+#include "BNO055.h"
+#include "adc.h"
+#include "i2c.h"
+#include "tim.h"
+#include "math.h"
+
+#define SENSORS_HI2C	hi2c1
+#define SENSORS_ADDRESS 0x28
+#define SENSORS_HTIM_ENC_L	htim5
+#define SENSORS_HTIM_ENC_R	htim3
+#define SENSORS_MOTOR_L 	0
+#define SENSORS_MOTOR_R		1
+
+#define SENSORS_CONST_B_TO_U  (3.3/4096)
+#define SENSORS_CONST_MOTOR_I (10/22.0)
+#define SENSORS_CONST_BAT_DIV (4)// 36k -> 12k
+#define SENSORS_CONST_INC_MM (1/53.5)	//increments to mm
+
+#define SENSOR_FILTER_LENGTH 10
+//TODO: define sensors_adcd
+
+float SENSORS_transPos; //mm
+float SENSORS_transVel;
+float SENSORS_transAccel;
+float SENSORS_transJerk;
+
+float SENSORS_anglePos; // rad
+float SENSORS_angleVel;
+float SENSORS_angleAccel;
+float SENSORS_angleJerk;
+
+uint16_t SENSORS_batteryV[2];	// mV
+uint16_t SENSORS_motorI[2];		// mA
+uint8_t SENSORS_irDistance[6]; 	// mm
+int16_t SENSORS_velocity[2];	// mm/s
+
+//ADCs
+int16_t SENSORS_irVal[6]; 		// FR DR SR SL DL FL - IR sensors
+uint16_t SENSORS_batVal[2]; 	// battery voltage
+uint16_t SENSORS_iSenseVal[2]; 	// motor current
+//enc
+int64_t SENSORS_valEnc[2];		// increments
+int32_t SENSORS_dist[2];		// mm
+//gyro
+int16_t SENSORS_xAngle; 		// 100* rad
+float SENSORS_xAngularVelocity; // rad/s
+
+uint8_t SENSORS_test_i2c();
+
+//start-up init
+void SENSORS_Init();
+
+// updates SENSORS_ values, recommended to call periodically
+void SENSORS_Update();
+
+// update gyro values via I2C
+void SENSORS_GyroUpdateValues();
+
+// update IR sensors values
+void SENSORS_AdcUpdateValues();
+
+// reorder ir adc sensor
+void SENSORS_irRead(uint16_t* sensorArray);
+
+//callback for adc compleate conversion
+void SENSORS_AdcCallback(ADC_HandleTypeDef* hadc);
+
+// read values from encoder timmer
+void SENSORS_EncoderUpdateValues();
+
+// callback for encoder timmer over/under flow
+void SENSORS_EncoderTimCallback(TIM_HandleTypeDef *htim);
+
+// calculate angular and translational values
+void SENSORS_vectorsCalc();
+
+typedef struct {
+	float data[SENSOR_FILTER_LENGTH];
+	uint8_t id;
+}SENSOR_FILTER_Float;
+
+// adds new value to filter
+void SENSOR_FilterAddFloat(float, SENSOR_FILTER_Float*);
+
+// calc average value in filter data
+float SENSOR_FilterGetFloat(SENSOR_FILTER_Float*);
+
+static void SENSOR_FilterResetFloat(SENSOR_FILTER_Float*);
+
+
+typedef struct {
+	uint16_t data[SENSOR_FILTER_LENGTH];
+	uint8_t id;
+}SENSOR_FILTER;
+
+// adds new value to filter
+void SENSOR_FilterAdd(uint16_t, SENSOR_FILTER*);
+// calc average value in filter data
+uint16_t SENSOR_FilterGet(SENSOR_FILTER*);
+
+#endif /* SENSORS_H_ */

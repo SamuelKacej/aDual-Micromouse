@@ -30,6 +30,8 @@
 #include "command.h"
 #include "motor.h"
 
+#define MOTION_RESERVE_DISTANCE // mm
+
 PID_CONTROLLER MOTION_angularController;
 PID_CONTROLLER MOTION_translationController;
 
@@ -48,17 +50,19 @@ void MOTION_Init(float tP,float tI,float tD,float aP,float aI,float aD);
 
 void MOTION_Update();
 
-static uint8_t MOTION_NewInstraction();
+uint8_t MOTION_NewInstraction();
 
-static void MOTION_ProcessedInstraction(INSTR_INSTRUCTION* instrActual);
+void MOTION_ProcessedInstraction(INSTR_INSTRUCTION* instrActual);
 
-static void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float* angularVel);
+void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float* angularVel);
 
 void MOTION_SetVelocity(float transV, float angularV);
 
-static void MOTION_MoveInstrId();
+void MOTION_MoveInstrId();
 
 void MOTION_inPlaceRotation(int);
+
+INSTR_INSTRUCTION* MOTION_GetNextInstruction(uint8_t idOffset);
 
 uint8_t MOTION_instrID;		// points to actual instraction
 uint32_t MOTION_uTimePeriod;	// micro seconds used for acceleration calc

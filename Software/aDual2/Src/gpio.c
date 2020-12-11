@@ -30,10 +30,12 @@
 
 /* USER CODE END 1 */
 
-/** Configure pins
-     PC0   ------> SharedAnalog_PC0
-     PC1   ------> SharedAnalog_PC1
-     PC3   ------> SharedAnalog_PC3
+/** Configure pins as
+        * Analog
+        * Input
+        * Output
+        * EVENT_OUT
+        * EXTI
 */
 void MX_GPIO_Init(void)
 {
@@ -55,12 +57,6 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PCPin PCPin PCPin */
-  GPIO_InitStruct.Pin = ADC_IR_LD_Pin|ADC_IR_LS_Pin|ADC_IR_RS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 

@@ -17,7 +17,6 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
-
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
@@ -38,6 +37,7 @@
 #include "motor.h"
 #include "motionSystem.h"
 #include "BNO055.h"
+#include "mouse.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,11 +55,11 @@
 void MAIN_SetPIDs(){
 
 // current
-  MOTOR_ControllerSet( &MOTOR_currentController[0], 7, 0.15, 0);
+  MOTOR_ControllerSet( &MOTOR_currentController[0], 9, 0.4, 0); // I_org = 0.15
   MOTOR_currentController[0].b = 0.8;	// source of P error variable
   MOTOR_currentController[0].c = 1;
 
-  MOTOR_ControllerSet( &MOTOR_currentController[1], 7, 0.15, 0);
+  MOTOR_ControllerSet( &MOTOR_currentController[1], 9, 0.4, 0); // I_org = 0.15
   MOTOR_currentController[1].b = 0.8;	// sorce of P error variable
   MOTOR_currentController[1].c = 1;
 
@@ -123,11 +123,9 @@ int _write(int file, char* data, int len){
   * @retval int
   */
 int main(void)
-
 {
   /* USER CODE BEGIN 1 */
   /* USER CODE END 1 */
-  
 
   /* MCU Configuration--------------------------------------------------------*/
 
@@ -177,8 +175,9 @@ int main(void)
   ACTUATOR_Init();
   MOTOR_INIT();
 
-
   MAIN_SetPIDs();
+  MAZE_ClearMaze(MAZE_maze); //odstranil som &
+
   // INIT CONTROLLERS
 
   // INIT PERIODIC TIMMERS
@@ -201,14 +200,11 @@ int main(void)
   INSTR_InstrList;
 
 */
- MOTION_uTurnTest();
+ //MOTION_uTurnTest();
+ HAL_Delay(30);
+ HAL_TIM_Base_Start_IT(&htim12);// 5ms periodic timmer for controller update
 
   /* USER CODE END 2 */
-
-  HAL_Delay(30);
-  HAL_TIM_Base_Start_IT(&htim12);// 5ms periodic timmer for controller update
-
- 
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -231,9 +227,12 @@ int main(void)
 
 	  if(SENSORS_batteryV[0] < 6800){
 	  	  		  //3.4V
+		  // TODO turn of periodic timmer
+
 	  	  while(1){
 			  MOTOR_SetVoltage(1, 0);
 			  MOTOR_SetVoltage(0, 0);
+
 
 			  // start blinking red LED
 			  ACTUATOR_LED(0, 0, 0);
@@ -246,9 +245,9 @@ int main(void)
 
 
 
-	  MOUSE_SearchRun(500);
-	  MOUSE_ReturnToStart(500);
-	  MOUSE_SpeedRun(1000);
+	  MOUSE_SearchRun(500.0);
+	  MOUSE_ReturnToStart((float)500);
+	  MOUSE_SpeedRun((float)1000);
 
 	  //printing sensors distances;
 	 // printf("%i,\t %i,\t %i,\t %i,\t %i,\t %i\t \r\n",\
@@ -294,11 +293,12 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage 
+  /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
@@ -313,7 +313,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -411,7 +411,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */

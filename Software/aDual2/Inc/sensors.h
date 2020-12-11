@@ -41,6 +41,9 @@
 #define SENSORS_CONST_BAT_DIV (4)// 36k -> 12k
 #define SENSORS_CONST_INC_MM (1/53.5)	//increments to mm
 
+//BNO055 can measure with frequency max 100Hz (10ms)
+#define SENSORS_IMU_uTIMEOUT 11000 //us 11ms
+
 #define SENSOR_FILTER_LENGTH 10
 //TODO: define sensors_adcd
 
@@ -110,7 +113,7 @@ void SENSOR_FilterAddFloat(float, SENSOR_FILTER_Float*);
 // calc average value in filter data
 float SENSOR_FilterGetFloat(SENSOR_FILTER_Float*);
 
-static void SENSOR_FilterResetFloat(SENSOR_FILTER_Float*);
+void SENSOR_FilterResetFloat(SENSOR_FILTER_Float*);
 
 
 typedef struct {

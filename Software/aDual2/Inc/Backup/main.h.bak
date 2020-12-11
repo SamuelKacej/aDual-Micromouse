@@ -115,7 +115,7 @@ volatile uint32_t MAIN_tPeriod, MAIN_tStart;
 #define TIM4_BUZZER_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
-#define WHEEL_PITCH 80 //mm
+#define WHEEL_PITCH 72 //mm
 
 
 /* USER CODE END Private defines */

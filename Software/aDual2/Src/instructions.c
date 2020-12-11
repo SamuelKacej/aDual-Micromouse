@@ -55,10 +55,11 @@ void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius,
 	radius *= 1.3;// nie je to KRUH, ale OVAL
 
 	const float angleRad = angleDeg*PI/180;
+	const float absAngleRad = (angleRad>=0)?angleRad:-angleRad;
 	// TODO: presny vypocet kryvky zakruty, nie je to kruh !!!!!
 
 	// arcLength must be always positive
-	const float arcLength =(angleDeg>0)? radius*angleRad : -radius*angleRad;  // mm
+	const float arcLength = radius*absAngleRad;  // mm
 
 
 
@@ -67,9 +68,9 @@ void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius,
 	if (radius != 0)
 		timeArc = arcLength/transVelocity; 		// Arc
 	else{
-		timeArc = angleRad * 180/ transVelocity;// in-place turn
-												// it will take same time as SS90deg turn
-		transVelocity = 0;						// no radius => no arc :)
+		timeArc = absAngleRad*180/ transVelocity;// in-place turn
+												 // it will take same time as SS90deg turn
+		transVelocity = 0;						 // no radius => no arc :)
 	}
 
 
@@ -120,7 +121,7 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 				// first and last instructions are empty
 				id++;
 				INSTR_AddArc(&insList[id], -45, 0, INSTR_AverageVelocity, cmdList[*idc]);
-				id +=2;// 4(arc) +1(empty)
+				id +=2;// 1 +1(empty)
 
 				break;
 			//--------------------------------------

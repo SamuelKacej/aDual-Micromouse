@@ -13,9 +13,9 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
  ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h \
- ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_exti.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio_ex.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_exti.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_cortex.h \
@@ -44,7 +44,8 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
  ../Inc/sensors.h ../Inc/BNO055.h ../Inc/adc.h ../Inc/i2c.h ../Inc/tim.h \
  ../Inc/maze.h ../Inc/actuator.h ../Inc/motor.h ../Inc/actuator.h \
  ../Inc/sensors.h ../Inc/motionSystem.h ../Inc/instructions.h \
- ../Inc/command.h ../Inc/maze.h ../Inc/motor.h ../Inc/BNO055.h
+ ../Inc/command.h ../Inc/maze.h ../Inc/motor.h ../Inc/BNO055.h \
+ ../Inc/mouse.h ../Inc/motionSystem.h
 
 ../Inc/main.h:
 
@@ -76,11 +77,11 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
 
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h:
 
-../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_exti.h:
-
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h:
 
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio_ex.h:
+
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_exti.h:
 
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_dma.h:
 
@@ -183,3 +184,7 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
 ../Inc/motor.h:
 
 ../Inc/BNO055.h:
+
+../Inc/mouse.h:
+
+../Inc/motionSystem.h:

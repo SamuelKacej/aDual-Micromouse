@@ -127,11 +127,11 @@ void MOTOR_SetMoment(uint8_t motorSelect, float requiredMoment ){
 
 	const float requiredCurrent = requiredMoment*MOTOR_CONST_M_I;// unit is A
 
-	/*float tmpU;
+	float tmpU;
 	if(requiredMoment == 0)
 		tmpU = 0;
-	else*/
-		float tmpU = MOTOR_ControllerUpdate(&MOTOR_currentController[motorSelect], \
+	else
+		 tmpU = MOTOR_ControllerUpdate(&MOTOR_currentController[motorSelect], \
 				requiredCurrent, ((float)SENSORS_motorI[motorSelect])/1000);	// mA->A
 
 	MOTOR_SetVoltage(motorSelect, tmpU);
@@ -152,12 +152,13 @@ void MOTOR_SetVelocity(uint8_t motorSelect, float requiredVelocity){
 	}
 	MOTOR_SetMoment(motorSelect, MOTOR_velocityController[motorSelect].U);
 
-	if(motorSelect = 1)
+	//TOTO TU PADA ten printf
+	/*if(motorSelect = 1)
 	printf(" %i,\t %.2f, \t %.2f, \t %.2f, \t %.2f, \t %.2f\n\r",\
 				MAIN_GetMicros()/1000, requiredVelocity,  MOTOR_velocityController[0].FB,\
 				 MOTOR_velocityController[0].U*1000, MOTOR_currentController[0].FB*1000,\
 				 MOTOR_currentController[0].U);
-
+*/
 	//MOTOR_SetVoltage(motorSelect, MOTOR_velocityController[motorSelect].U);
 
 }

@@ -11,7 +11,6 @@
 
 
 static uint32_t prevTime;
-// TODO : how to set init Motion _instr ID;
 
 void MOTION_Init(float tP,float tI,float tD,float aP,float aI,float aD){
 
@@ -76,9 +75,9 @@ void MOTION_Update(){
 	MOTION_ChcekForNewInstraction();
 
 	if(MOTION_instrID%2)
-		ACTUATOR_LED(0, 0, 130);
+		ACTUATOR_LED(-1, 0, 130);
 	else
-		ACTUATOR_LED(0, 130, 0);
+		ACTUATOR_LED(-1, 130, 0);
 
 	// processed actauall instraction
 	MOTION_ProcessedInstraction(&insList[MOTION_instrID]);
@@ -101,10 +100,10 @@ void MOTION_UpdateList(){
 
 		if(MOTION_instrID < INSTR_LIST_HALF_SIZE){
 			// first half of list is processed, so second wil be updated
-			if(MOTION_instrID > 0)
+			if(MOTION_instrID >= 0) // originalne tu bolo >, mozno tu ma byt >=
 				INSTR_FillHalfList(1);
 		}else{
-			if(MOTION_instrID > INSTR_LIST_HALF_SIZE)
+			if(MOTION_instrID >= INSTR_LIST_HALF_SIZE)
 				INSTR_FillHalfList(0);
 		}
 
@@ -113,7 +112,7 @@ void MOTION_UpdateList(){
 	}
 }
 
-static void MOTION_ProcessedInstraction(INSTR_INSTRUCTION* instrActual){ // updated
+void MOTION_ProcessedInstraction(INSTR_INSTRUCTION* instrActual){ // updated
 	/*
 	 * Do acceleration by highest non zero derivation
 	 * calc velocity, set velocity to motors
@@ -125,9 +124,11 @@ static void MOTION_ProcessedInstraction(INSTR_INSTRUCTION* instrActual){ // upda
 	float newVelA, newVelT;
 	MOTION_StepVelocity(instrActual, &newVelT, &newVelA);
 
-	if(MAIN_GetMicros()/1e6 < 1)
-	//printf(" %i,\t %.2f, \t %.2f, \t %.2f, \t %.2f\n\r",\
-			MAIN_GetMicros()/1000, newVelT, SENSORS_transVel, newVelA*100, SENSORS_angleVel*100);
+	//if(MAIN_GetMicros()/1e6 < 1) I have no idea why this was there, probably for testing
+
+
+	//	printf(" %i,\t %.2f, \t %.2f, \t %.2f, \t %.2f\n\r",
+	//		MAIN_GetMicros()/1000, newVelT, SENSORS_transVel, newVelA*100, SENSORS_angleVel*100);
 
 	// set volocity
 	MOTION_SetVelocity(newVelT, newVelA + MOTION_ExternalAngCorrection);
@@ -149,7 +150,7 @@ static float MOTION_SinusoidalVel(float phi, float time, float continuance){
 	return  phi * M_PI * sin(M_PI*continuance) / (2*time);
 }
 
-static void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float* angularVel){ //updated
+void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float* angularVel){ //updated
 	/*
 	 * transVel and angularVel are return parameter for calculated velocities.
 	 * instr is actual instruction
@@ -158,6 +159,7 @@ static void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float
 
 	// YOU CANT ACCELERATE IN TURN !!
 	if(instr->angle != 0){
+
 		// rotation
 
 
@@ -177,10 +179,15 @@ static void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float
 
 
 		if(instr->dist == 0){
+
+			//if u stop you will have allways continuance 0 (you can't start)
+			// I think only this bridge of IF does need this initial step
+			const float tmpContinuanceAngle1 = (tmpContinuanceAngle<0.05)? 0.05: angleContinuance;
+
 			// In-place turn
 			*transVel = 0;
 
-			*angularVel = MOTION_SinusoidalVel(instr->angle, instr->time, angleContinuance);
+			*angularVel = MOTION_SinusoidalVel(instr->angle, instr->time, tmpContinuanceAngle1 );
 			// TODO overshoot protection
 
 		}else{
@@ -235,7 +242,7 @@ void MOTION_ChcekForNewInstraction(){ // updated
 	const float distTrans = SENSORS_transPos;
 	const float distAng	  = SENSORS_anglePos;
 
-	// main should send REQUSET to new instraction
+	// MAIN (MOUSE.h) should send REQUSET to new instraction
 	// this should be activated only if robot travel to long distance
 	//const float distReserv = 50;//mm
 	//const float angleReserv = 3; //rad
@@ -268,7 +275,7 @@ void MOTION_ChcekForNewInstraction(){ // updated
 	}
 }
 
-static uint8_t MOTION_NewInstraction(){
+uint8_t MOTION_NewInstraction(){
 
 
 	//TODO : confirm that half-list was pre-calculated,
@@ -305,7 +312,7 @@ void MOTION_resetList(int id){
 void MOTION_uTurnTest(){
 //Z turne
 
-	const int vel = 900;
+	const int vel = 1000;
 
 	int id = 0;
 	MOTION_resetList(id);
@@ -325,7 +332,6 @@ void MOTION_uTurnTest(){
 	insList[id].speed  	= 2*vel;
 	insList[id].accel	= 0;
 	id++;
-
 /*
 				//    list,  angle, radius, velocity ,
 	INSTR_AddArc(&insList[id], - 135, 73, vel, CMD_SD135R);
@@ -347,8 +353,8 @@ void MOTION_uTurnTest(){
 	insList[id].speed  	= 0;
 	insList[id].accel	= -vel*vel/2/CELL_DIMENSION;
 	id++;
-*/
 
+*/
 	MOTION_resetList(id);
 	insList[id].command = CMD_FWD0 + 1;
 	insList[id].dist   	= 1*CELL_DIMENSION;
@@ -361,12 +367,37 @@ void MOTION_uTurnTest(){
 
 
 	MOTION_resetList(id);
-	INSTR_InstrListUsedInstr[0] = id-1;
+	id++;
+
+	MOTION_resetList(id);
+	INSTR_InstrListUsedInstr[0] = id;
 	INSTR_InstrListUsedInstr[1] = 0;
 
 }
 
-static void MOTION_MoveInstrId(){// updated
+static uint8_t MOTION_GetNextInstrID(uint8_t idOffset){
+	// function return id of next element in MOTION_instrID
+	// idOffset -> offset from actual instruction (0 = actual instr, 1 = next instr, ...)
+
+	// circular move
+	uint8_t tmpID = (MOTION_instrID + idOffset) % (2*INSTR_LIST_HALF_SIZE);
+
+	// does it use first or second half of list
+	const uint8_t halfList = (tmpID < INSTR_LIST_HALF_SIZE)? 0 : 1 ;
+
+	//id in half of the list
+	const uint8_t relativeID = tmpID - halfList * INSTR_LIST_HALF_SIZE;
+
+	// example: want to go to 3rd instr (relID =  2), but pre-calculated was only 2 instr
+	if( relativeID >= INSTR_InstrListUsedInstr[halfList]){
+		// new instruction was not pre-calculated
+		// so go to begin of other half
+		tmpID = (halfList == 0 )? INSTR_LIST_HALF_SIZE : 0 ;
+	}
+
+	return tmpID;
+}
+void MOTION_MoveInstrId(){// updated
 	/*
 	 *  circularly move MOTION_instrID
 	 *  it chcek if THE new instruction was pre-calculated
@@ -376,28 +407,16 @@ static void MOTION_MoveInstrId(){// updated
 	 */
 
 
-
-	// circular move
-	MOTION_instrID = (MOTION_instrID + 1) % (2*INSTR_LIST_HALF_SIZE);
-
-	// does it use first or second half of list
-	const uint8_t halfList = (MOTION_instrID < INSTR_LIST_HALF_SIZE)? 0 : 1 ;
-
-	//id in half of the list
-	const uint8_t relativeID = MOTION_instrID - halfList * INSTR_LIST_HALF_SIZE;
-
-	// example: want to go to 3rd instr (relID =  2), but pre-calculated was only 2 instr
-	if( relativeID >= INSTR_InstrListUsedInstr[halfList]){
-		// new instruction was not pre-calculated
-		// so go to begin of other half
-		MOTION_instrID = (halfList == 0 )? INSTR_LIST_HALF_SIZE : 0 ;
-	}
-
+	MOTION_instrID = MOTION_GetNextInstrID(1);
 
 	// if u are at begin of list:
 	// allow precalculation of other half  list instractions
 	if(MOTION_instrID == 0 || MOTION_instrID == INSTR_LIST_HALF_SIZE)
 		INSTR_ListAlreadyUpdated = 0;// other list is not pre-calculated
+}
+
+INSTR_INSTRUCTION* MOTION_GetNextInstruction(uint8_t idOffset){
+	return &insList[MOTION_GetNextInstrID(idOffset)];
 }
 
 void MOTION_SetVelocity(float transV, float angularV){

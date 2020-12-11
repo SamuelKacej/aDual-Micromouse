@@ -40,6 +40,7 @@
 "Src/maze.o"
 "Src/motionSystem.o"
 "Src/motor.o"
+"Src/mouse.o"
 "Src/sd_diskio.o"
 "Src/sdio.o"
 "Src/sensors.o"

@@ -81,6 +81,7 @@ void SENSORS_Update(){
 // this function read values from sensors and do some calculation then it store in struct (motor, irSensors, position)
 // tato funkcia by nemala zabrat viac ako 200us
 
+	//TODO
 	//tieto funkcie mozno bude fajn rozbalit a popreplietat aby sa procak mohol pocitat pokial ADC convertuje
 
 
@@ -88,7 +89,7 @@ void SENSORS_Update(){
 
 	SENSORS_EncoderUpdateValues(); // 5us
 	SENSORS_AdcUpdateValues(); // this function takes around 110us
-	//SENSORS_GyroUpdateValues(); //  takes  around 10ms
+	SENSORS_GyroUpdateValues(); //  takes  around 10ms
 
 	SENSORS_vectorsCalc(); // 5 us
 
@@ -132,8 +133,9 @@ void SENSORS_vectorsCalc(){
 	SENSORS_transAccel 	= newTransAccel;
 	SENSORS_transJerk 	= newTransJerk;
 
+	// TODO ak chces cez gyro filtrovat aj uhol musis sa usitit ze na zaciatku bol IRC a GYRO na rovnako...
 	SENSORS_anglePos 	= newAnglePos;
-	SENSORS_angleVel 	= newAngleVel;
+	SENSORS_angleVel 	= (newAngleVel + SENSORS_xAngularVelocity)/2 ;
 	SENSORS_angleAccel 	= newAngleAccel;
 	SENSORS_angleJerk 	= newAngleJerk;
 
@@ -143,9 +145,18 @@ void SENSORS_vectorsCalc(){
 }
 
 void SENSORS_GyroUpdateValues(){
+	// This function takes 0.8ms - 1.2ms to processed
 
-	SENSORS_xAngle = 100 * bno055_getEulerYaw(&SENSORS_HI2C);
-	SENSORS_xAngularVelocity = 100*bno055_getGyroZ(&SENSORS_HI2C);
+
+	static volatile uint32_t lastFcnCall = 0;
+	const uint32_t time = MAIN_GetMicros();
+
+	if(time - lastFcnCall > SENSORS_IMU_uTIMEOUT){
+		//TODO: sync IRC and xAngle
+		//SENSORS_xAngle = 100 * bno055_getEulerYaw(&SENSORS_HI2C);
+		SENSORS_xAngularVelocity = 100*bno055_getGyroZ(&SENSORS_HI2C);
+		lastFcnCall = time;
+	}
 }
 
 void SENSORS_AdcUpdateValues(){
@@ -165,7 +176,7 @@ void SENSORS_AdcUpdateValues(){
 	HAL_GPIO_WritePin(GPIO_IR_LED2_GPIO_Port, GPIO_IR_LED2_Pin,  GPIO_PIN_RESET);
 
 	// read adc ir sens
-	SENSORS_irRead(&irAdcToogleVal[0][0]);													// # reading 00 - toto by slo vynechat
+	SENSORS_irRead((uint16_t*) &irAdcToogleVal[0][0]);													// # reading 00 - toto by slo vynechat
 
 	// get system clock
 	uint32_t clk_start = MAIN_GetMicros();
@@ -179,7 +190,7 @@ void SENSORS_AdcUpdateValues(){
 	// wait until reads ends
 	while(adcReadComplete == 0b111);
 	// read adc ir sens
-	SENSORS_irRead(&irAdcToogleVal[1][0]);													// # reading 10
+	SENSORS_irRead((uint16_t*) &irAdcToogleVal[1][0]);													// # reading 10
 
 
 	// get system clock
@@ -195,7 +206,7 @@ void SENSORS_AdcUpdateValues(){
 	// wait until reads ends
 	while(adcReadComplete == 0b111);
 	// read adc ir sens
-	SENSORS_irRead(&irAdcToogleVal[2][0]);													// # reading 01
+	SENSORS_irRead((uint16_t*) &(irAdcToogleVal[2][0]));													// # reading 01
 
 	HAL_GPIO_WritePin(GPIO_IR_LED2_GPIO_Port, GPIO_IR_LED2_Pin,  GPIO_PIN_RESET);
 
@@ -231,17 +242,45 @@ void SENSORS_AdcUpdateValues(){
 uint8_t SENSORS_irVal2dist( uint16_t val, uint8_t id){
 	// return value is in mm
 
+	/*
 	const float A[6] = {  80, 133, 119, 105, 162, 142};
 	const float B[6] = { 341, 188, 168, 149, 230, 201};
 	const float C[6] = {1158, 144, 774, 541, 608, 783};
 
 	const float tmp = (val-C[id])/B[id];
 	const float  distance = A[id] / (tmp*tmp);
+	 */
+
+	const float th[6] = { 900, 0, 0, 0, 0, 1140};
+	float  distance;
+
+	if(val < th[id]){
+		// distance > ~20mm
+
+		const float A[6] = { 2910, 2168, 1832, 1526, 2927, 3560};
+		const float C[6] = { 240, 188, 168, 149, 230, 170};
+		const float D[6] = { 16.5, 0, 0, 0, 0, 15};
+
+		const float tmp = (val-C[id])/A[id];
+		distance = 1/(tmp*tmp) + D[id];
+
+	}else{
+		// distance < ~20mm
+
+		const float A[6] = { 12300 , 2168, 1832, 1526, 2927, 10000};
+		const float C[6] = {-835, 188, 168, 149, 230, -500};
+		const float D[6] = {-12.7, 0, 0, 0, 0, -8.7};
+
+		const float tmp = (val-C[id])/A[id];
+		distance = 1/(tmp*tmp) + D[id];
+
+	}
+
 
 	if(distance < 0 )
 		return 0;
-	if(distance > 140)
-		return 140;
+	if(distance > 200)
+		return 200;
 
 	return (uint8_t)distance;
 
@@ -358,7 +397,7 @@ float SENSOR_FilterGetFloat(SENSOR_FILTER_Float* filter){
 	return cnt/SENSOR_FILTER_LENGTH;
 }
 
-static void SENSOR_FilterResetFloat(SENSOR_FILTER_Float* filter){
+void SENSOR_FilterResetFloat(SENSOR_FILTER_Float* filter){
 		for(int i=0; i< SENSOR_FILTER_LENGTH ; i++)
 			filter->data[i]=0;
 

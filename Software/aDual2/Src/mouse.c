@@ -8,7 +8,7 @@
 
 #include "mouse.h"
 
-uint8_t orientationErrorPrev = 0;
+uint8_t orientationErrorPrev;
 CMD_T MOUSE_LastCMD;
 
 uint8_t MOUSE_SearchRun( float avgVel ){
@@ -37,7 +37,8 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 	while(1){
 
 		 MAZE_updatePath(actualPosition, 0x88); // 77, 78, 87, 88 are finsh cells
-		 CMD_AbsolutePathToRelative(MAZE_path, CMD_directionList);
+		 CMD_AbsolutePathToRelative( (MAZE_DIRECTIONS*) MAZE_path, CMD_directionList);
+		 // you are searching so u know what's only one cell in front of you
 		 CMD_directionList[1] = CMD_S;
 		 CMD_PathToCommand(CMD_directionList, CMD_commandList);
 
@@ -54,6 +55,7 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 
 		 }
 
+		 actualPosition = MOUSE_CellPosition;
 		 //finish
 		 if(     MOUSE_CellPosition == 0x77 ||\
 				 MOUSE_CellPosition == 0x78 ||\
@@ -80,7 +82,7 @@ uint8_t MOUSE_SpeedRun( float avgVel ){
 	 */
 
 	 MAZE_updatePath(0x00, 0x88); // 77, 78, 87, 88 are finsh cells
-	 CMD_AbsolutePathToRelative(MAZE_path, CMD_directionList);
+	 CMD_AbsolutePathToRelative((MAZE_DIRECTIONS*)MAZE_path, CMD_directionList);
 	 CMD_PathToCommand(CMD_directionList, CMD_commandList);
 
 	 INSTR_AverageVelocity = avgVel;
@@ -108,7 +110,7 @@ uint8_t MOUSE_SpeedRun( float avgVel ){
 
 	 }
 
-
+	 return 0;
 }
 
 uint8_t MOUSE_ReturnToStart( float avgVel ){
@@ -119,7 +121,7 @@ uint8_t MOUSE_ReturnToStart( float avgVel ){
 
 
 	MAZE_updatePath(MOUSE_CellPosition, 0x00);
-	CMD_AbsolutePathToRelative(MAZE_path, CMD_directionList);
+	CMD_AbsolutePathToRelative((MAZE_DIRECTIONS*)MAZE_path, CMD_directionList);
 	CMD_PathToCommand(CMD_directionList, CMD_commandList);
 
 	INSTR_AverageVelocity = avgVel;
@@ -142,6 +144,7 @@ uint8_t MOUSE_ReturnToStart( float avgVel ){
 
 	 }
 
+	return 0;
 }
 
 uint8_t MOUSE_UpdateAbsoluOrientation(){
@@ -154,7 +157,7 @@ uint8_t MOUSE_UpdateAbsoluOrientation(){
 	 */
 
 
-
+//TODO HIGHEST PRIORITY
 	if (insList[MOTION_instrID].command != MOUSE_LastCMD){
 		MOUSE_LastCMD = insList[MOTION_instrID].command;
 		MOUSE_pathIdx++;
@@ -180,6 +183,8 @@ uint8_t MOUSE_ChcekForNewComand(){
 	 * */
 
 
+	const INSTR_INSTRUCTION* currentInstruction = &insList[MOTION_instrID];
+	const INSTR_INSTRUCTION* nextInstruction =  MOTION_GetNextInstruction(1);
 	//pozrisa aky je comand
 	//pozri ci je vzdialenost od end distance 18 cm pred koncom
 	//pozri sa do mapy a hladaj roh
@@ -188,15 +193,39 @@ uint8_t MOUSE_ChcekForNewComand(){
 	// v inom pripade hladaj
 
 
-	// if next cmd is stop
+
+	if(currentInstruction->command == CMD_STOP){
+		// STOP
+		// Robot should stop in the middle of the cell
+
+	}else if(currentInstruction->command >= CMD_FWD0 && currentInstruction->command <= CMD_FWD15){
+		// TODO  if next is stop
+
+		// find last corner
+		// after you find it travel 90mm + c (c will be measured)
+		//
+		if(nextInstruction->command == CMD_STOP){
+			// stop 90mm before end -> middle of the cell
+		}
+
+		//todo
+		//if robot travel > required distance - 180mm, it wil start to searching for border!
 
 
-	// forward
+		// FORWARD
+		/* Robot should return 1 (to start processing new command),
+		 * when front pairs of wheel wil be in next cell
+		 * and back pair of wheel will be in previous cell
+		 * (Robot center will be on the border, of the cells)
+		 */
 
 
+		// IF OK MOMENT MOTION_RequestNewInstruction = 1
 
-	// diagonal
 
+	}else if(currentInstruction->command >= CMD_DIA0 && currentInstruction->command <= CMD_DIA31){
+		// DIAGONAL
+	}
 
 	// jednasa o kratke vzdialenosti takze tam sa velka chyba nenaintegruje
 	// zatial moze zostat bez presneho prepinania
@@ -214,6 +243,38 @@ uint8_t MOUSE_ChcekForNewComand(){
 
 }
 
+uint8_t MOUSE_FindCornerInRotation(){
+	// this function will tell if robot will in future turn to right/left
+	// return 0 -> nor right/ left turn
+	// return 1 -> R
+	// return 2 -> L
+
+
+	// is whole list updated?
+	if(INSTR_ListAlreadyUpdated == 1){
+
+		INSTR_INSTRUCTION* pInstr;
+		const uint8_t arrayLength = INSTR_LIST_HALF_SIZE *2;
+
+		//TODO not sure if start from 1 or 0, probably from 1
+		for(uint8_t i = 1 ; i < arrayLength; i++){
+
+			pInstr =  MOTION_GetNextInstruction(i);
+
+			// is instruaction rotate command?
+			if(pInstr->command >= CMD_TRANSITON && pInstr->command <= CMD_DD90L){
+				return 1 + (pInstr->command%2);
+				// return 1=R or 2=L
+
+			}
+		}
+	}
+
+
+	return 0;
+	// in list is only forward/ diagonal/ stop => none turns
+
+}
 void MOUSE_PrepareToStart(){
 
 	// Nastav pociatocne natocenie podla prvej a druhej pozicie bunky v maze path
@@ -224,7 +285,7 @@ void MOUSE_PrepareToStart(){
 	// transform mouse 8 directional model, to maze 4 directional model
 	const uint8_t actualDirection = 1 << ((MOUSE_CellOrientation-1)>>1);
 
-	const uint8_t difference = actualDirection - requireDirection ;
+	const int8_t difference = actualDirection - requireDirection ;
 
 	switch(difference){
 		case 0:
@@ -287,6 +348,6 @@ void MOUSE_CorrectionForward(){
 }
 
 void MOUSE_CorrectionRotation(){
-
+	// TODO: Correction with front or side wall
 }
 

@@ -26,6 +26,7 @@ void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS* abosoluteList, CMD_DIRECTIONS_T
 
 		const int8_t dir =  CMD_DirectionMazeToCmd( abosoluteList[i].absoluteDirection);
 		relativeList[i] = CMD_DirectionRotate(dir, &lastRotation );
+		// TODO: add optional break after 3 STOP in row
 
 	}
 
@@ -73,14 +74,14 @@ uint8_t CMD_DirectionMazeToCmd(uint8_t dir){
 
 void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 
-	// input directions must be realtive
+	// input directions must be realative
 	// state machine
 
 	uint8_t x = 0;
 	uint8_t state = CMD_STATE_START;
 	uint8_t idx = 0;
 
-#define ERROR_STATE // vypis idx i a path[i]
+#define ERROR_STATE (printf("Error while converting path to command at %i index'n", i))
 
 	for( uint16_t i = 0 ; i < MAZE_PATH_SIZE ; i++ ){
 
@@ -99,7 +100,20 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 					case CMD_S:
 						state = CMD_STATE_STOP;
 						break;
+					case CMD_R:
+						cmdList[idx++] = CMD_IP90R;
+						state = CMD_STATE_START;
+						break;
+					case CMD_L:
+						cmdList[idx++] = CMD_IP90L;
+						state = CMD_STATE_START;
+						break;
+					case CMD_B:
+						cmdList[idx++] = CMD_IP180L;
+						state = CMD_STATE_START;
+						break;
 					default:
+						ERROR_STATE;
 						break;
 				}
 				break;
@@ -260,7 +274,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 						state = CMD_STATE_STOP;
 						break;
 					default:
-						ERROR_STATE
+						ERROR_STATE;
 						break;
 					}
 				break;
