@@ -15,11 +15,11 @@ void CMD_clearList(){
 
 }
 
-void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS* abosoluteList, CMD_DIRECTIONS_T* relativeList ){
+void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS* abosoluteList, CMD_DIRECTIONS_T* relativeList, CMD_ABSOLUTE_ROTATION_T initRotation ){
 	// translate absolute direction made by floodfill to realative list
 	// reference direction will be direction from  previous cell
 
-	int8_t lastRotation = 0;
+	int8_t lastRotation = initRotation;
 
 
 	for( uint16_t i = 0 ; i < MAZE_PATH_SIZE ; i++ ){
@@ -56,6 +56,56 @@ uint8_t CMD_DirectionRotate(int8_t dir,	int8_t* rotation){
 		return command;
 
 
+}
+
+uint8_t CMD_RelativeWallToAbsolute(CMD_WALLS_RELATIVE dirRel, uint8_t rotation){
+	/*
+	 * transform relative
+	 *
+	 *
+	 *	      4
+		   ___C___
+		  |       |
+		8 D       B 2
+		  |___A___|
+			  1
+	 */
+	 /* dirRel =  1,2,4,8
+
+	  * rotation = 8 : 2481
+	  * rotation = 4 : 1248
+	  * rotation = 2 : 8124
+	  * rotation = 1 : 4812
+	  * 	  * 	  *
+
+	  * */
+
+	uint8_t out = 0;
+
+	//sorry for this, i know it can be written more in pro style...
+	switch (rotation){
+		case 1: // backward
+			out |= dirRel.WALL.right << 3;
+			out |= dirRel.WALL.front << 0;
+			out |= dirRel.WALL.left  << 1;
+
+		case 2: // left
+			out |= dirRel.WALL.right << 3;
+			out |= dirRel.WALL.front << 0;
+			out |= dirRel.WALL.left  << 1;
+
+		case 4: // backward
+			out |= dirRel.WALL.right << 1;
+			out |= dirRel.WALL.front << 2;
+			out |= dirRel.WALL.left  << 3;
+
+		case 8: // right
+			out |= dirRel.WALL.right << 2;
+			out |= dirRel.WALL.front << 3;
+			out |= dirRel.WALL.left  << 0;
+
+	}
+	return out;
 }
 uint8_t CMD_DirectionMazeToCmd(uint8_t dir){
 // translate ABSOLUET maze coordinace to ABSOLUTE command cordinance

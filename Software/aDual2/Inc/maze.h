@@ -59,7 +59,7 @@ typedef struct
 	uint8_t wall; 	// b0000 DCBA
 				 	// wall of the cell
 
-	uint8_t cost; 	// price to cell for maze solving algorith
+	uint8_t cost; 	// price to cell for maze solving algorithm
 
 	uint8_t address;// absolute address of cell in maze
 					// MAZE_SIZE_X * actualX  + actualY // 0xXY
@@ -80,10 +80,19 @@ typedef struct
 typedef struct{
 	MAZE_CELL* cell;  			// pointer to maze cell
 								//											 |y
-	uint8_t absoluteDirection; 	// Direcetion to next cell in absolute coord |__ __x
+	uint8_t absoluteDirection; 	// Direction to next cell in absolute coord |__ __x
 								// value can be  0b0000 DCBA
 								// 0x00 mean STOP
 }MAZE_DIRECTIONS;
+
+typedef	struct{
+	// TODO IMPLEMENT this
+		uint8_t south : 1;
+		uint8_t east : 1;
+		uint8_t north : 1;
+		uint8_t west : 1;
+
+} MAZE_CELL_WALLS;
 
 volatile MAZE_CELL MAZE_maze[MAZE_SIZE_X * MAZE_SIZE_Y];			// maze
 volatile MAZE_DIRECTIONS MAZE_path[MAZE_PATH_SIZE];				// Maze path from position to position

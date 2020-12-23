@@ -37,9 +37,9 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 	while(1){
 
 		 MAZE_updatePath(actualPosition, 0x88); // 77, 78, 87, 88 are finsh cells
-		 CMD_AbsolutePathToRelative( (MAZE_DIRECTIONS*) MAZE_path, CMD_directionList);
+		 CMD_AbsolutePathToRelative( (MAZE_DIRECTIONS*) MAZE_path, CMD_directionList, MOUSE_CellOrientation);
 		 // you are searching so u know what's only one cell in front of you
-		 CMD_directionList[1] = CMD_S;
+//		 CMD_directionList[1] = CMD_S;
 		 CMD_PathToCommand(CMD_directionList, CMD_commandList);
 
 		 INSTR_AverageVelocity = avgVel;
@@ -51,6 +51,13 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 
 			 //TODO : crash detection
 			 MOTION_UpdateList();
+			 if(MOUSE_isMouseInMiddleOfCell()){
+				 CMD_WALLS_RELATIVE detectedWalls ;
+				 detectedWalls.wall
+				 =  MOUSE_LookForWalls();
+				 MOUSE_WriteWalls(detectedWalls);
+
+			 }
 
 
 		 }
@@ -82,7 +89,7 @@ uint8_t MOUSE_SpeedRun( float avgVel ){
 	 */
 
 	 MAZE_updatePath(0x00, 0x88); // 77, 78, 87, 88 are finsh cells
-	 CMD_AbsolutePathToRelative((MAZE_DIRECTIONS*)MAZE_path, CMD_directionList);
+	 CMD_AbsolutePathToRelative((MAZE_DIRECTIONS*)MAZE_path, CMD_directionList, MOUSE_CellOrientation);
 	 CMD_PathToCommand(CMD_directionList, CMD_commandList);
 
 	 INSTR_AverageVelocity = avgVel;
@@ -121,7 +128,7 @@ uint8_t MOUSE_ReturnToStart( float avgVel ){
 
 
 	MAZE_updatePath(MOUSE_CellPosition, 0x00);
-	CMD_AbsolutePathToRelative((MAZE_DIRECTIONS*)MAZE_path, CMD_directionList);
+	CMD_AbsolutePathToRelative((MAZE_DIRECTIONS*)MAZE_path, CMD_directionList, MOUSE_CellOrientation);
 	CMD_PathToCommand(CMD_directionList, CMD_commandList);
 
 	INSTR_AverageVelocity = avgVel;
@@ -158,6 +165,8 @@ uint8_t MOUSE_UpdateAbsoluOrientation(){
 
 
 //TODO HIGHEST PRIORITY
+	// TODO add corection values for new instruction
+	// corection will be made from mistake of position made in instruction processing
 	if (insList[MOTION_instrID].command != MOUSE_LastCMD){
 		MOUSE_LastCMD = insList[MOTION_instrID].command;
 		MOUSE_pathIdx++;
@@ -191,7 +200,7 @@ uint8_t MOUSE_ChcekForNewComand(){
 	// ak je nasledujuci cmd STOP
 	// tak zastav v strede bunky
 	// v inom pripade hladaj
-
+// TODO add correction
 
 
 	if(currentInstruction->command == CMD_STOP){
@@ -349,5 +358,80 @@ void MOUSE_CorrectionForward(){
 
 void MOUSE_CorrectionRotation(){
 	// TODO: Correction with front or side wall
+}
+
+uint8_t MOUSE_isMouseInMiddleOfCell(){
+
+	return 1;
+	//TODO:
+	// return 1 if mouse is in middle of the cell
+
+}
+
+uint8_t MOUSE_LookForWalls(){
+	// retrun walls that robot can see
+
+
+	// filter
+	// yn = yn(t-T_smpl) + (y(t) - yn(t-T_smpl))/k_filtCoeficient;
+	static uint8_t sensorsDist[6] = {50, 50, 50, 50, 50, 50};
+	const uint8_t k_filterCoeficient = 3;
+
+	for(uint8_t i = 0 ; i < 6 ; i++){
+		sensorsDist[i] = sensorsDist[i] + (SENSORS_irDistance[i]-sensorsDist[i])/k_filterCoeficient;
+	}
+
+	// decide if is there wall
+	// TODO fuzzy or neural network
+	CMD_WALLS_RELATIVE wall;
+
+	wall.wall = 0;
+
+
+	//left
+	if(sensorsDist[2] < MOUSE_WALL_DISTRANCE_TRESHOLD)
+		wall.WALL.left = 1;
+
+	// right
+	if(sensorsDist[3] < MOUSE_WALL_DISTRANCE_TRESHOLD)
+		wall.WALL.right = 1;
+
+	if(sensorsDist[0] < MOUSE_WALL_DISTRANCE_TRESHOLD || //
+		sensorsDist[5] < MOUSE_WALL_DISTRANCE_TRESHOLD)
+		wall.WALL.front = 1;
+
+	return wall.wall;
+}
+
+void MOUSE_WriteWallsToMaze(uint8_t wallid){
+	const uint8_t absWall = CMD_RelativeWallToAbsolute((CMD_WALLS_RELATIVE)wallid, MOUSE_CellOrientation);
+	const uint8_t newWall = absWall | MAZE_maze[MOUSE_CellPosition].wall;
+	MAZE_writeCell(MOUSE_CellPosition,newWall, 0xFF);
+}
+
+uint8_t MOUSE_WriteWalls(CMD_WALLS_RELATIVE wall){
+
+
+	// pozri ci su 2 za sebou rovnake spravi o tom ze tam je wall
+
+	static CMD_WALLS_RELATIVE prevWall;
+
+
+				// nemam naladu to pisat pekne... sorry
+	//right
+	if(prevWall.wall & wall.wall & 2)
+	MOUSE_WriteWallsToMaze(2);
+
+	//front
+	if(prevWall.wall & wall.wall & 4)
+		MOUSE_WriteWallsToMaze(4);
+
+	//left
+	if(prevWall.wall & wall.wall & 8)
+		MOUSE_WriteWallsToMaze(8);
+
+	//TODO: return if was wall writen in the cell
+	return 0;
+
 }
 

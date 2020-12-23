@@ -16,11 +16,11 @@
 
 uint16_t MOUSE_CellPosition;
 uint16_t MOUSE_CellPositionPrev;
-uint8_t MOUSE_CellOrientation; //TODO HIGH priority
+CMD_ABSOLUTE_ROTATION_T MOUSE_CellOrientation; //TODO HIGH priority
 uint8_t MOUSE_pathIdx;
 
-#define MOUSE_DISTANCE_FROM_WALL 53 // namerana vhodna hodnota //mm
-
+#define MOUSE_DISTANCE_FROM_WALL 53 // keep this distance from L/R wall
+#define MOUSE_WALL_DISTRANCE_TRESHOLD 100 //mm
 /*
  *   y
  * 	|	6  5  4
@@ -48,5 +48,9 @@ void MOUSE_CorrectionDiagonal();
 void MOUSE_CorrectionForward();
 
 void MOUSE_CorrectionRotation();
+
+uint8_t MOUSE_WriteWalls(CMD_WALLS_RELATIVE wall);
+uint8_t MOUSE_LookForWalls();
+uint8_t MOUSE_isMouseInMiddleOfCell();
 
 #endif /* MOUSE_H_ */

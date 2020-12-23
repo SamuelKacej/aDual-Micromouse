@@ -135,7 +135,32 @@ typedef enum{
 
 }CMD_DIRECTIONS_T;
 
+typedef enum{
+	/*
+	 * 		   ┌─4─┐
+	 * 		  8│ 0 │2
+	 * 		   └─1─┘
+	 */
 
+	CMD_ROT_NULL = 0,
+	CMD_ROT_SUTH = 1,
+	CMD_ROT_EAST = 2,
+	CMD_ROT_NORTH = 4,
+	CMD_ROT_WEST = 8
+
+}CMD_ABSOLUTE_ROTATION_T;
+
+typedef union{
+struct{
+	// TODO IMPLEMENT this
+		uint8_t back : 1;
+		uint8_t right : 1;
+		uint8_t front : 1;
+		uint8_t left : 1;
+
+} WALL;
+uint8_t wall;
+}CMD_WALLS_RELATIVE;
 
 // list off command;
 CMD_T CMD_commandList[CMD_LIST_SIZE];
@@ -150,8 +175,8 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T*, CMD_T*);
 // convert
 uint8_t CMD_DirectionMazeToCmd(uint8_t);
 
-
-void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS*, CMD_DIRECTIONS_T*);
+uint8_t CMD_RelativeWallToAbsolute(CMD_WALLS_RELATIVE dirRel, uint8_t rotation);
+void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS*, CMD_DIRECTIONS_T*, CMD_ABSOLUTE_ROTATION_T);
 
 uint8_t CMD_DirectionRotate(int8_t dir,	int8_t* rotation);
 

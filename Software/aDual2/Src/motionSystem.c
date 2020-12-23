@@ -431,6 +431,9 @@ void MOTION_SetVelocity(float transV, float angularV){
 
 	// TODO: adaptive pid regulator
 
+	// TODO feedforward !!!! Medium priority
+
+
 	/* TODO VYLADIT REGULATOR sorry nestiham do odovzdania vyladit tento regulator
 	MOTOR_ControllerUpdate(&MOTION_angularController, angularV, SENSORS_angleVel);
 	MOTOR_ControllerUpdate(&MOTION_translationController, transV, SENSORS_transVel);
