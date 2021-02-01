@@ -257,9 +257,9 @@ uint8_t SENSORS_irVal2dist( uint16_t val, uint8_t id){
 	if(val < th[id]){
 		// distance > ~20mm
 
-		const float A[6] = { 2910, 2168, 1832, 1526, 2927, 3560};
-		const float C[6] = { 240, 188, 168, 149, 230, 170};
-		const float D[6] = { 16.5, 0, 0, 0, 0, 15};
+		const float A[6] = { 2910, 2168, 2650	, 1710, 2927, 3560};
+		const float C[6] = { 240, 188, 807		, 776, 230, 170};
+		const float D[6] = { 16.5, 0, -8.9		, -7.1, 0, 15};
 
 		const float tmp = (val-C[id])/A[id];
 		distance = 1/(tmp*tmp) + D[id];
@@ -267,9 +267,9 @@ uint8_t SENSORS_irVal2dist( uint16_t val, uint8_t id){
 	}else{
 		// distance < ~20mm
 
-		const float A[6] = { 12300 , 2168, 1832, 1526, 2927, 10000};
-		const float C[6] = {-835, 188, 168, 149, 230, -500};
-		const float D[6] = {-12.7, 0, 0, 0, 0, -8.7};
+		const float A[6] = { 12300 , 2168, 2650	, 1710, 2927, 10000};
+		const float C[6] = {-835, 188, 807		, 776, 230, -500};
+		const float D[6] = {-12.7, 0, -8.9		, -7.1, 0, -8.7};
 
 		const float tmp = (val-C[id])/A[id];
 		distance = 1/(tmp*tmp) + D[id];

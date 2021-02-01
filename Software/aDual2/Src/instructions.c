@@ -9,7 +9,10 @@
 #include "instructions.h"
 
 
-
+/*
+ * Previously ussed instruction processing, back in time there ware two arrays,
+ *  where one was processed and another was filled with data then they switch...
+ *  now it uses just one big array
 void INSTR_FillHalfList( uint8_t calcHalf ){
 
 	// calcHalf - set which half (first or second) will be filled with instraction
@@ -21,6 +24,14 @@ void INSTR_FillHalfList( uint8_t calcHalf ){
 
 	const uint16_t usedInstruction = INSTR_CmdToInstr( CMD_commandList, &INSTR_CommandListIndex, insList );
 	INSTR_InstrListUsedInstr[calcHalf] = usedInstruction;
+
+}
+*/
+void INSTR_FillList(INSTR_INSTRUCTION* insStartElement){
+	//Function takes CMD_commandList, and translate it into Instructions from
+
+	const uint16_t usedInstruction = INSTR_CmdToInstr( CMD_commandList,&INSTR_CommandListIndex, insStartElement );
+	INSTR_InstrListUsedInstr = usedInstruction;
 
 }
 
@@ -40,7 +51,7 @@ float INSTR_CalcVel(uint16_t vStart, uint16_t dist, uint16_t accel){
 	return sqrt(vStart*vStart + accel*dist*2);
 }
 
-void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius, uint16_t transVelocity, CMD_T command ){
+void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius, uint16_t transVelocity, CMD_COMMAND* command ){
 
 
 	/*
@@ -84,9 +95,7 @@ void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius,
 
 }
 
-
-
-uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* insList){
+uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTION* insList){
 
 	/*
 	 * cmdList 	- is pointer to WHOLE command list!
@@ -98,17 +107,20 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 
 
 	uint16_t id = 0; //id in insList < 0 ; INSTR_LIST_SIZE>
+	uint16_t prevID = 0;
+	uint8_t cntStop = 0;
 
-	INSTR_ResetInstrList(insList, INSTR_LIST_HALF_SIZE);
+	INSTR_ResetInstrList(insList, INSTR_LIST_SIZE);
 
 	while ( *idc < CMD_LIST_SIZE){
 
-		if( id > (INSTR_LIST_HALF_SIZE - MAX_INSTRACTION_PER_COMMAND)){
+		/* this was used when list have max 16 element
+		if( id > ( - MAX_INSTRACTION_PER_COMMAND)){
 			return id;
 
-		}
+		}*/
 
-		switch(cmdList[*idc]){
+		switch(cmdList[*idc].cmd){
 
 			case CMD_STOP:
 					// reset set instruction to stop instruction
@@ -119,8 +131,9 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 			// expectted that robot is not moving, just standing at the place
 			case CMD_IP45R:
 				// first and last instructions are empty
+
 				id++;
-				INSTR_AddArc(&insList[id], -45, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -45, 0, INSTR_AverageVelocity, &cmdList[*idc]);
 				id +=2;// 1 +1(empty)
 
 				break;
@@ -128,7 +141,7 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 			case CMD_IP45L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +45, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +45, 0, INSTR_AverageVelocity, &cmdList[*idc]);
 				id +=2;// 1 +1(empty)
 
 				break;
@@ -136,7 +149,7 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 			case CMD_IP90R:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], -90, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -90, 0, INSTR_AverageVelocity, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -144,7 +157,7 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 			case CMD_IP90L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +90, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +90, 0, INSTR_AverageVelocity, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -152,7 +165,7 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 			case CMD_IP135R:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], -135, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -135, 0, INSTR_AverageVelocity, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -160,7 +173,7 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 			case CMD_IP135L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +135, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +135, 0, INSTR_AverageVelocity, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -168,7 +181,7 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 			case CMD_IP180R:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], -180, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -180, 0, INSTR_AverageVelocity, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -176,7 +189,7 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 			case CMD_IP180L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +180, 0, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +180, 0, INSTR_AverageVelocity, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -184,96 +197,96 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 
 			//=========== TRANSITIONS ==============
 			case CMD_SS90SR:
-				INSTR_AddArc(&insList[id], -90, 90, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -90, 90, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SS90SL:
-				INSTR_AddArc(&insList[id], 90, 90, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 90, 90, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SS180R:
-				INSTR_AddArc(&insList[id], -180, 90, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -180, 90, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SS180L:
-				INSTR_AddArc(&insList[id], 180, 90, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 180, 90, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 
 			case CMD_SD45R:
-				INSTR_AddArc(&insList[id], -45, 83, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -45, 83, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SD45L:
-				INSTR_AddArc(&insList[id], 45, 83, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 45, 83, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SD135R:
-				INSTR_AddArc(&insList[id], -135, 76, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -135, 76, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SD135L:
-				INSTR_AddArc(&insList[id], 135, 76, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 135, 76, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 
 			//--------------------------------------
 			case CMD_DS45R:
 				// diagonalna zatacka
-				INSTR_AddArc(&insList[id], -45, 83, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -45, 83, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_DS45L:
-				INSTR_AddArc(&insList[id], 45, 83, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 45, 83, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_DS135R:
 				//	https://www.desmos.com/calculator/frivebujta
-				INSTR_AddArc(&insList[id], -135, 76, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -135, 76, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_DS135L:
 				//	https://www.desmos.com/calculator/frivebujta
-				INSTR_AddArc(&insList[id], 135, 76, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 135, 76, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_DD90R:
 				// r = 45mm * sqrt(2)
-				INSTR_AddArc(&insList[id], -90, 64, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -90, 64, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_DD90L:
 				// r = 45mm * sqrt(2)
-				INSTR_AddArc(&insList[id], 90, 64, INSTR_AverageVelocity, cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 90, 64, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 
 
 			default:
 				//============== FORWARD ==============
-				if( cmdList[*idc] >=  CMD_FWD0 && cmdList[*idc] <= CMD_FWD15){
+				if( cmdList[*idc].cmd >=  CMD_FWD0 && cmdList[*idc].cmd <= CMD_FWD15){
 
 					// forward N borders of cell
-					uint8_t nCells = cmdList[*idc] - CMD_FWD0;
+					uint8_t nCells = cmdList[*idc].cmd - CMD_FWD0;
 
-					if(nCells> 3){
+					if(nCells > 3){
 						// peak acceleration
 
 
 						// speed up
-						insList[id].command = CMD_FWD1;
+						insList[id].command = &cmdList[*idc];
 						insList[id].dist   	= CELL_DIMENSION;
 						insList[id].speed  	= INSTR_CalcVel(INSTR_AverageVelocity,\
 													CELL_DIMENSION, INSTR_MaxTransAccel);
@@ -281,11 +294,11 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 						id++;
 
 						// constV
-						const uint8_t cellsConstV = nCells-3;
+						//const uint8_t cellsConstV = nCells-3;
 						// speed-up + speed-down + safeCell;
 
-						insList[id].command	= CMD_FWD0 + cellsConstV;
-						insList[id].dist   	= CELL_DIMENSION*cellsConstV;
+						insList[id].command	= &cmdList[*idc];
+						insList[id].dist   	= cmdList[*idc].dist-CELL_DIMENSION*3;
 						insList[id].speed  	= insList[id-1].speed;
 						insList[id].accel  	= 0;
 						id++;
@@ -294,7 +307,7 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 						/*
 						 * FWD2 sa rata cez kolko hran bunky musi prejst
 						 * */
-						insList[id].command = CMD_FWD2;
+						insList[id].command = &cmdList[*idc];
 						insList[id].dist    = 2*CELL_DIMENSION;
 						insList[id].speed   = INSTR_AverageVelocity;
 						insList[id].accel   = -INSTR_MaxTransAccel;
@@ -304,8 +317,8 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 					}else{
 						// const velocity
 
-						insList[id].command = CMD_FWD0 + nCells;
-						insList[id].dist    = nCells* CELL_DIMENSION;
+						insList[id].command = &cmdList[*idc];
+						insList[id].dist    = cmdList[*idc].dist;
 						insList[id].speed   = INSTR_AverageVelocity;
 						insList[id].accel  	= 0;
 						id++;
@@ -314,10 +327,10 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 
 
 				//============== DIAGONAL ==============
-				}else if(cmdList[*idc] >=  CMD_DIA0 && cmdList[*idc] <= CMD_DIA31){
+				}else if(cmdList[*idc].cmd >=  CMD_DIA0 && cmdList[*idc].cmd <= CMD_DIA31){
 
 					// diagonal N centers of cell
-					const uint8_t nCells = cmdList[*idc] - CMD_DIA0;
+					const uint8_t nCells = cmdList[*idc].cmd - CMD_DIA0;
 
 
 					// forward N borders of cell
@@ -326,7 +339,7 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 
 
 						// speed up
-						insList[id].command	= CMD_DIA1;
+						insList[id].command	= &cmdList[*idc];
 						insList[id].dist   	= CELL_DIMENSION*SQRT2/2;
 						insList[id].speed  	= INSTR_CalcVel(INSTR_AverageVelocity,\
 													CELL_DIMENSION*SQRT2/2, INSTR_MaxTransAccel/2);
@@ -337,14 +350,14 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 						const uint8_t cellsConstV = nCells-3;
 						// speed-up + speed-down + safeCell;
 
-						insList[id].command	= CMD_DIA0 + cellsConstV;
+						insList[id].command	= &cmdList[*idc];
 						insList[id].dist   	= CELL_DIMENSION*cellsConstV*SQRT2/2;
 						insList[id].speed  	= insList[id-1].speed;
 						insList[id].accel  	= 0;
 						id++;
 
 						// slow-down on 2 cells
-						insList[id].command = CMD_DIA2;
+						insList[id].command = &cmdList[*idc];
 						insList[id].dist   	= 2*CELL_DIMENSION*SQRT2/2;
 						insList[id].speed  	= INSTR_AverageVelocity;
 						insList[id].accel  	= -INSTR_MaxTransAccel/2;
@@ -354,7 +367,7 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 					}else{
 						// const velocity
 
-						insList[id].command= CMD_FWD0 + nCells;
+						insList[id].command= &cmdList[*idc];
 						insList[id].dist   = nCells*CELL_DIMENSION*SQRT2/2;
 						insList[id].speed  = INSTR_AverageVelocity;
 						insList[id].accel  = 0;
@@ -365,13 +378,27 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 
 				}else{
 					// ERROR, unknown command
-					printf("UNNKOWN COMMAND %i with id %i \r\n", (int)cmdList[*idc], (int) *idc);
+					printf("UNNKOWN COMMAND %i with id %i \r\n", (int)&cmdList[*idc], (int) *idc);
 				}
 
 
 		}// end of switch
 
+		for(uint16_t i = prevID ; i<id ;i++ ){
+			insList[i].command = &cmdList[*idc];
+		}
+		prevID = id;
+
+
+		if(cmdList[*idc].cmd == CMD_STOP){
+			cntStop++;
+			if(cntStop>5)
+				break; // break of while -> return
+		}else{
+			cntStop = 0;
+		}
 		*idc += 1;
+
 
 	}// end of while
 
@@ -380,10 +407,12 @@ uint16_t INSTR_CmdToInstr( CMD_T* cmdList, uint16_t* idc, INSTR_INSTRUCTION* ins
 }
 
 void INSTR_ResetInstrList(INSTR_INSTRUCTION* list, uint16_t length){
+
+
 	//function set every instruction in list to 0
 	for( uint16_t i=0  ; i< length ; i++){
 
-		list[i].command 	= CMD_STOP;
+		list[i].command 	= CMD_commandList;
 		list[i].dist 		= 0;
 		list[i].speed		= 0;
 		list[i].accel		= 0;
@@ -393,6 +422,10 @@ void INSTR_ResetInstrList(INSTR_INSTRUCTION* list, uint16_t length){
 		list[i].angleBegin	= 0;
 		list[i].angleEnd	= 0;
 		list[i].time		= 0;
+		list[i].continuance = 0;
+		list[i].next 		= &list[i+1];
 
 	}
+
+	list[length-1].next = &list[0];
 }

@@ -37,9 +37,9 @@
  *  if the function need to accelerate to get to the target in the time
  * */
 
-#define INSTR_LIST_HALF_SIZE 16
+#define INSTR_LIST_SIZE 256
 
-#define CELL_DIMENSION 180 //mm
+
 #define PI 3.1416
 #define SQRT2 1.4142
 #define MAX_INSTRACTION_PER_COMMAND 4
@@ -54,7 +54,7 @@ float INSTR_MaxAngVelocity 		;	// rad/s
 
 typedef struct _INSTRUCTION_{
 
-		CMD_T command;
+		CMD_COMMAND* command; //pointer to command from which was instruction calculated
 
 		// you can't ACCELERATE and ROTATE in the same instruction !!!
 
@@ -78,19 +78,23 @@ typedef struct _INSTRUCTION_{
 
 		float time;			// s	, used for inplace turns
 
+		uint8_t continuance;// 0-100%
+
+		struct _INSTRUCTION_* next;
+
 }INSTR_INSTRUCTION;
 
 
-INSTR_INSTRUCTION INSTR_InstrList[2*INSTR_LIST_HALF_SIZE];
-uint8_t INSTR_InstrListUsedInstr[2];	//how many of InstrList is calculated
+INSTR_INSTRUCTION INSTR_InstrList[INSTR_LIST_SIZE];
+uint8_t INSTR_InstrListUsedInstr;	//how many of InstrList is calculated
 uint16_t INSTR_CommandListIndex;		// define from which ID wil be comands tgranslated
 uint8_t INSTR_ListAlreadyUpdated;		// allows precalculation of list
 
-void INSTR_FillHalfList( uint8_t );
+void INSTR_FillList( INSTR_INSTRUCTION* instrList);
 	// motion control shoud call this function
 	// to update half of the list (0 or 1)
 
-uint16_t INSTR_CmdToInstr( CMD_T* , uint16_t* , INSTR_INSTRUCTION*);
+uint16_t INSTR_CmdToInstr( CMD_COMMAND* , uint16_t*,  INSTR_INSTRUCTION*);
 	// wite max INSTR_LIST_SIZE to list
 	// return number of written instractions
 
@@ -99,8 +103,13 @@ void INSTR_ResetInstrList(INSTR_INSTRUCTION* , uint16_t);
 float INSTR_CalcAccel(uint16_t vStart, uint16_t vTarget, uint16_t distance);
 
 
-void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius,\
-		uint16_t transVelocity, CMD_T command );
+void INSTR_AddArc(\
+		INSTR_INSTRUCTION* insList,\
+		int16_t angleDeg,\
+		uint16_t radius,\
+		uint16_t transVelocity,\
+		CMD_COMMAND* command );
+
 
 
 #endif /* INSTRUCTIONS_H_ */

@@ -1,5 +1,5 @@
-actuator.c:47:6:ACTUATOR_BuzzerStop	0	static
-actuator.c:31:6:ACTUATOR_BuzzerStart	8	static
-actuator.c:52:6:ACTUATOR_LED	4	static
 actuator.c:13:6:ACTUATOR_Init	8	static
-actuator.c:67:6:ACTUATOR_MotorSetPWM	4	static
+actuator.c:31:6:ACTUATOR_BuzzerStart	24	static
+actuator.c:47:6:ACTUATOR_BuzzerStop	4	static
+actuator.c:52:6:ACTUATOR_LED	16	static
+actuator.c:67:6:ACTUATOR_MotorSetPWM	16	static

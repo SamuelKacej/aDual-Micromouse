@@ -10,7 +10,7 @@
 
 #include "main.h"
 #include "maze.h"
-
+#include "stdio.h"
 
 
 typedef enum{
@@ -122,6 +122,9 @@ typedef enum{
 #define CMD_STATE_DIAG_RL	9
 #define CMD_STATE_DIAG_RR	10
 
+
+#define CELL_DIMENSION 180 //mm
+
 // relative directions
 // used for MAZE_ABSOLUTE -> CMD_RELATIVE
 
@@ -135,27 +138,51 @@ typedef enum{
 
 }CMD_DIRECTIONS_T;
 
+typedef union{
+struct{
+	// TODO IMPLEMENT this
+		uint8_t back : 1;
+		uint8_t right : 1;
+		uint8_t front : 1;
+		uint8_t left : 1;
+
+} WALL;
+uint8_t wall;
+}CMD_WALLS_RELATIVE;
+
+
+typedef struct{
+	CMD_T cmd;
+	uint16_t dist; //mm
+
+	// position and rotation after command will be executed
+	MAZE_DIRECTIONS* path;
+
+
+}CMD_COMMAND;
 
 
 // list off command;
-CMD_T CMD_commandList[CMD_LIST_SIZE];
+CMD_COMMAND CMD_commandList[CMD_LIST_SIZE];
 
 // list of relative directions
 CMD_DIRECTIONS_T CMD_directionList[CMD_LIST_SIZE];
 
 // list of absolute direction to list of commands
-void CMD_PathToCommand(CMD_DIRECTIONS_T*, CMD_T*);
+void CMD_PathToCommand(CMD_DIRECTIONS_T*, CMD_COMMAND*, MAZE_DIRECTIONS* );
 
 
 // convert
 uint8_t CMD_DirectionMazeToCmd(uint8_t);
 
-
-void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS*, CMD_DIRECTIONS_T*);
+uint8_t CMD_RelativeWallToAbsolute(CMD_WALLS_RELATIVE dirRel, uint8_t rotation);
+void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS*, CMD_DIRECTIONS_T*, MAZE_ABSOLUTE_DIRECTION_T);
 
 uint8_t CMD_DirectionRotate(int8_t dir,	int8_t* rotation);
 
 // clear command list
 void CMD_clearList();
+
+uint8_t CMD_AbsoluteRotToDirection(MAZE_ABSOLUTE_DIRECTION_T absR);
 
 #endif /* COMMAND_H_ */

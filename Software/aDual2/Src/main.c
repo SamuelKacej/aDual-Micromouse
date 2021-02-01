@@ -47,7 +47,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+uint8_t vTest;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -60,7 +60,7 @@ void MAIN_SetPIDs(){
   MOTOR_currentController[0].c = 1;
 
   MOTOR_ControllerSet( &MOTOR_currentController[1], 9, 0.4, 0); // I_org = 0.15
-  MOTOR_currentController[1].b = 0.8;	// sorce of P error variable
+  MOTOR_currentController[1].b = 0.8;	// source of P error variable
   MOTOR_currentController[1].c = 1;
 
   // velocity
@@ -181,29 +181,11 @@ int main(void)
   // INIT CONTROLLERS
 
   // INIT PERIODIC TIMMERS
-/*
-  MAZE_ClearMaze(&MAZE_maze);
-  MAZE_writeCell(0x00, 0x0B, 0xFF);
-  MAZE_writeCell(0x01, 0x0A, 0xFF);
-  MAZE_writeCell(0x02, 0x08, 0xFF);
-  MAZE_writeCell(0x03, 0x0E, 0xFF);
-  MAZE_writeCell(0x10, 0x0B, 0xFF);
-  MAZE_writeCell(0x11, 0x0A, 0xFF);
-  MAZE_writeCell(0x12, 0x02, 0xFF);
-  MAZE_writeCell(0x13, 0x0E, 0xFF);
 
-  MAZE_updatePath(0x00, 0x10);
-  CMD_AbsolutePathToRelative(MAZE_path, CMD_directionList);
-  CMD_PathToCommand(CMD_directionList, CMD_commandList);
-  MOTION_UpdateList();
-  MOTION_instrID;
-  INSTR_InstrList;
 
-*/
- //MOTION_uTurnTest();
+  HAL_TIM_Base_Start_IT(&htim12);// 5ms periodic timmer for controller update
+
  HAL_Delay(30);
- HAL_TIM_Base_Start_IT(&htim12);// 5ms periodic timmer for controller update
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -212,13 +194,19 @@ int main(void)
 
 
 
+
+	MOTOR_SetVoltage(1, 0);
+	MOTOR_SetVoltage(0, 0);
+
+
+
   uint8_t LED_Pulse = 0;
 
   volatile uint32_t tStart = MAIN_GetMicros();
 
-
   while (1)
   {
+
 
 
 	  //SENSORS_xAngularVelocity = bno055_getGyroZ(&SENSORS_HI2C);
@@ -226,28 +214,44 @@ int main(void)
 
 
 	  if(SENSORS_batteryV[0] < 6800){
-	  	  		  //3.4V
-		  // TODO turn of periodic timmer
+	  	  		  //3.4V per cell
 
 	  	  while(1){
+
+	  		HAL_TIM_Base_Stop_IT(&htim12);
+
 			  MOTOR_SetVoltage(1, 0);
 			  MOTOR_SetVoltage(0, 0);
 
-
 			  // start blinking red LED
 			  ACTUATOR_LED(0, 0, 0);
-			  HAL_Delay(40);
+			  HAL_Delay(100);
 			  ACTUATOR_LED(50, 0, 0);
-			  HAL_Delay(10);
+			  HAL_Delay(20);
 
 	  	  }
 	    	  }
 
+	  vTest = MOUSE_LookForWalls();
 
 
 	  MOUSE_SearchRun(500.0);
-	  MOUSE_ReturnToStart((float)500);
-	  MOUSE_SpeedRun((float)1000);
+
+	  HAL_TIM_Base_Stop_IT(&htim12);
+	  MOTOR_SetVoltage(1, 0);
+	  MOTOR_SetVoltage(0, 0);
+
+	  tStart = MAIN_GetMicros() ;
+  	  while(tStart+1e7 > MAIN_GetMicros()){
+		  ACTUATOR_LED(-1, -1, 100);
+		  HAL_Delay(250);
+		  ACTUATOR_LED(-1, -1, 0);
+		  HAL_Delay(250);
+		  }
+  	HAL_TIM_Base_Start_IT(&htim12);
+
+	 // MOUSE_ReturnToStart((float)500);
+	 // MOUSE_SpeedRun((float)1000);
 
 	  //printing sensors distances;
 	 // printf("%i,\t %i,\t %i,\t %i,\t %i,\t %i\t \r\n",\
@@ -350,20 +354,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	  SENSORS_Update(); // 140 us
 	  MOTION_Update();
+/*
+	  char x[64];
+	  uint8_t len = sprintf(x,"%i, %.3f, %.3f, %.3f, %.3f \n\r",(int)(MAIN_GetMicros()/1000),
+			  MOTOR_currentController[1].U,
+			  MOTOR_velocityController[1].U*1000,
+			 MOTOR_velocityController[1].FB,
+			 MOTOR_velocityController[1].W);
 
-	  //ACTUATOR_LED(-1, (MAIN_GetMicros()/4000)%255, 0);
+	  HAL_UART_Transmit(&huart3, (uint8_t*)x, len, 1000);
 
-	  //printf("mSeconds: %i \r\n",MAIN_GetMicros()/1000);
-
-	  //printf("TIME: %i #@\r\n", (int)(MAIN_GetMicros() - sTime));
-	  //MOTOR_SetVelocity(1, 100);
-	  //MOTOR_SetVelocity(0, 100);
-      //MOTION_SetVelocity(100, 0);
-
-
-	  //MAIN_tPeriod = MAIN_GetMicros() - timePer;
-
-
+*/
 
   } else if(htim->Instance == htim2.Instance)
 	  MAIN_seconds++;

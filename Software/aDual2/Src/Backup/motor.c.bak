@@ -152,12 +152,13 @@ void MOTOR_SetVelocity(uint8_t motorSelect, float requiredVelocity){
 	}
 	MOTOR_SetMoment(motorSelect, MOTOR_velocityController[motorSelect].U);
 
-	if(motorSelect = 1)
+	//TOTO TU PADA ten printf
+	/*if(motorSelect = 1)
 	printf(" %i,\t %.2f, \t %.2f, \t %.2f, \t %.2f, \t %.2f\n\r",\
 				MAIN_GetMicros()/1000, requiredVelocity,  MOTOR_velocityController[0].FB,\
 				 MOTOR_velocityController[0].U*1000, MOTOR_currentController[0].FB*1000,\
 				 MOTOR_currentController[0].U);
-
+*/
 	//MOTOR_SetVoltage(motorSelect, MOTOR_velocityController[motorSelect].U);
 
 }

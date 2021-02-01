@@ -10,22 +10,37 @@
 
 void CMD_clearList(){
 
-	for(uint16_t i = 0 ; i < CMD_LIST_SIZE ; i++)
-		CMD_commandList[i] = CMD_STOP;
+	for(uint16_t i = 0 ; i < CMD_LIST_SIZE ; i++){
+		CMD_commandList[i].cmd = CMD_STOP;
+		CMD_commandList[i].dist = 0;
+	}
 
 }
+uint8_t CMD_AbsoluteRotToDirection(MAZE_ABSOLUTE_DIRECTION_T absR){
 
-void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS* abosoluteList, CMD_DIRECTIONS_T* relativeList, CMD_ABSOLUTE_ROTATION_T initRotation ){
+	// prekala do rot
+	// tato funkcia robi nieco uplne ine ako ma napisane je to len TMP na jedno pouziteie
+	switch(absR){
+	case 0: return 0;
+	case 1: return 2;
+	case 2: return +1;
+	case 4: return 0;
+	case 8: return -1;
+	}
+	return -1;
+}
+void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS* abosoluteList, CMD_DIRECTIONS_T* relativeList, MAZE_ABSOLUTE_DIRECTION_T initRotation ){
 	// translate absolute direction made by floodfill to realative list
 	// reference direction will be direction from  previous cell
 
-	int8_t lastRotation = initRotation;
+	int8_t lastRotation = CMD_AbsoluteRotToDirection(initRotation);
 
 
 	for( uint16_t i = 0 ; i < MAZE_PATH_SIZE ; i++ ){
 
 		const int8_t dir =  CMD_DirectionMazeToCmd( abosoluteList[i].absoluteDirection);
 		relativeList[i] = CMD_DirectionRotate(dir, &lastRotation );
+
 		// TODO: add optional break after 3 STOP in row
 
 	}
@@ -37,10 +52,15 @@ uint8_t CMD_DirectionRotate(int8_t dir,	int8_t* rotation){
 	/*	Rotate absolut comand coordiance by given rotation,
 	 * return relative direction
 	 * return *rotation new rotation.
+	 * rotacia ma byt +-1,2 ????? TO JE OTAZKA!
 	 * 			_2_
-	 * 		 1 | 0 |3
+	 * 		 1 | 0 |3  -- toto je asi zle
 	 * 			-4-
+		///////////////
+		 *
 	 */
+
+
 
 	if(dir == 0x00)
 		return CMD_S;
@@ -88,22 +108,22 @@ uint8_t CMD_RelativeWallToAbsolute(CMD_WALLS_RELATIVE dirRel, uint8_t rotation){
 			out |= dirRel.WALL.right << 3;
 			out |= dirRel.WALL.front << 0;
 			out |= dirRel.WALL.left  << 1;
-
+			break;
 		case 2: // left
 			out |= dirRel.WALL.right << 3;
 			out |= dirRel.WALL.front << 0;
 			out |= dirRel.WALL.left  << 1;
-
+			break;
 		case 4: // backward
 			out |= dirRel.WALL.right << 1;
 			out |= dirRel.WALL.front << 2;
 			out |= dirRel.WALL.left  << 3;
-
+			break;
 		case 8: // right
 			out |= dirRel.WALL.right << 2;
 			out |= dirRel.WALL.front << 3;
 			out |= dirRel.WALL.left  << 0;
-
+			break;
 	}
 	return out;
 }
@@ -122,18 +142,202 @@ uint8_t CMD_DirectionMazeToCmd(uint8_t dir){
 	return 0xFF;
 }
 
-void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
+void CMD_incrementRotation8(int8_t* x, int8_t* y, CMD_COMMAND* cmd){
+
+	//TODO add diagonals, it is not as easy as orthogonals
+
+	switch(cmd->path->absoluteDirection){ // to bola hodnota absolutnej rotacie na konci vykonania prikazu
+						 // switch(cmd->rotEnd)
+	case ROT_NORTH:
+		*x =  *x;
+		*y =  *y;
+		break;
+	case ROT_WEST:
+		*x = -*y;
+		*y =  *x;
+		break;
+	case ROT_SOUTH:
+		*x = -*x;
+		*y = -*y;
+		break;
+	case ROT_EAST:
+		*x =  *y;
+		*y = -*x;
+		break;
+	case ROT_NW:
+	case ROT_NE:
+	case ROT_SW:
+	case ROT_SE:
+	default:
+		return;
+	}
+}
+
+int8_t CMD_dirToRot8(MAZE_ABSOLUTE_DIRECTION_T dir){
+
+	/*
+	 * Input direction
+	 * 			 N
+	 * 		 12     6
+	 * 		   ┌─4─┐
+	 * 	  W   8│ 0 │2   E
+	 * 		   └─1─┘
+	 *		  9     3
+	 *			 S
+	 */
+
+	/*
+	 * Output rotation
+	 * 			 N
+	 * 		  1    -1
+	 * 		   ┌─0─┐
+	 * 	  W   2│ 0 │-2   E
+	 * 		   └─4─┘
+	 *		  3     -3
+	 *			 S
+	 */
+
+	switch(dir){
+	case ROT_NORTH:	return 0;
+	case ROT_NW:	return 1;
+	case ROT_WEST:	return 2;
+	case ROT_SW:	return 3;
+	case ROT_SOUTH:	return 4; // -4
+	case ROT_SE:	return -3;
+	case ROT_EAST:	return -2;
+	case ROT_NE:	return -1;
+	case ROT_NULL: 	return 0;
+	}
+
+
+
+}
+
+MAZE_ABSOLUTE_DIRECTION_T CMD_rotToDir8(int8_t rot){
+	/*
+		 * Input rotation
+		 * 			 N
+		 * 		  1    -1
+		 * 		   ┌─0─┐
+		 * 	  W   2│ 0 │-2   E
+		 * 		   └─4─┘
+		 *		  3     -3
+		 *			 S
+		 */
+
+		/*
+		 * Output direction
+		 * 			 N
+		 * 		 12     6
+		 * 		   ┌─4─┐
+		 * 	  W   8│ 0 │2   E
+		 * 		   └─1─┘
+		 *		  9     3
+		 *			 S
+		 */
+	switch(rot){
+		case  0:	return ROT_NORTH;
+		case  1:	return ROT_NW;
+		case  2:	return ROT_WEST;
+		case  3:	return ROT_SW;
+		case  4:	return ROT_SOUTH;
+		case -4:	return ROT_SOUTH;
+		case -3:	return ROT_SE ;
+		case -2:	return ROT_EAST;
+		case -1:	return ROT_NE;
+		}
+
+
+
+}
+
+MAZE_ABSOLUTE_DIRECTION_T CMD_directionRotate8(MAZE_ABSOLUTE_DIRECTION_T orgRot, MAZE_ABSOLUTE_DIRECTION_T rotIncr){
+
+	/*
+	 * rotIncrement is rotation add to original rotation
+	 * rotIncr == North :=  orgRot + 0  deg
+	 * rotIncr == West  :=  orgRot + 90  deg
+	 * rotIncr == South :=  orgRot + 180 deg
+	 * rotIncr == East  :=  orgRot - 90  deg
+	 *
+	 * SE=(E, NE)
+	 */
+
+	int8_t org = CMD_dirToRot8(orgRot);
+	int8_t incr = CMD_dirToRot8(rotIncr);
+
+	//12 becous 8 (whole rotation) + 1 half of rotation
+	const int8_t finalRot = (12+org+incr)%8 - 4;
+	return CMD_rotToDir8(finalRot);
+}
+/*
+ *
+ * --- Tato funkcia bola zakomentovane pretoze zapisovanie pozicie do CMD
+ *  sa spravilo pomocou linkovania absPath > CMD ; abs path obsahuje cell a abs dir (NWSE)
+ *  ak sa ukaze ze hetno linkovanie staci tato funkcia sa moze zmazat.
+ *  zakomentovana je lebo cmd by musel ma tinu strukturu
+ *
+void CMD_WritePossitionIntoCommand(	CMD_COMMAND* cmdToWrite,\
+									CMD_COMMAND* cmdPrev,\
+									int8_t posIncrementX,\
+									int8_t posIncrementY,\
+									MAZE_ABSOLUTE_DIRECTION_T rotIncrement,\
+									CMD_T cmd ,\
+									uint16_t dist \
+									){
+
+	// rotIncrement for same rotatione CMD_ROT_NORTH
+	// to retate +90deg write CMD_ROT_WEST
+	// *
+	// *
+	// * X,Y pos increments are intremet to cmdPrev position, where is thought that prev rotation is allway north,
+	// * this fcn rotate xy with coresponding rotation given by cmdPrev.RotEnd
+	// *
+	// *
+
+	cmdToWrite->cmd =  cmd;
+
+	cmdToWrite->dist = dist;
+
+	cmdToWrite->rotEnd = CMD_directionRotate8(cmdPrev->rotEnd, rotIncrement);
+
+
+	// increment rotation
+
+	CMD_incrementRotation8(&posIncrementX, &posIncrementY, cmdPrev)
+
+	const uint8_t posXstart = (cmdPrev->cellEnd->address & 0xF0 ) >> 4;
+	const uint8_t posYstart = cmdPrev->cellEnd->address & 0x0F;
+
+	const uint8_t newAddress = (posXstart+posIncrementX)<<4 + (posYstart+posIncrementY);
+	cmdToWrite->cellEnd = &MAZE_maze[newAddress];
+
+}
+*/
+void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DIRECTIONS* absPath){
 
 	// input directions must be realative
 	// state machine
 
 	uint8_t x = 0;
 	uint8_t state = CMD_STATE_START;
-	uint8_t idx = 0;
+	uint8_t idx = 1;
+	uint8_t initPosOffset = CELL_DIMENSION/2;//mm
 
-#define ERROR_STATE (printf("Error while converting path to command at %i index'n", i))
+	//cmdList[0].cellEnd = 0x00;
+	cmdList[0].dist = 0;
 
+
+	#define ERROR_STATE (printf("Error while converting path to command at %i index'n", i))
+
+
+	cmdList[0].cmd = CMD_STOP;
+	uint8_t prevIdx = 0;
+// TODO clear cmd list
+
+	uint16_t iEnd =  MAZE_PATH_SIZE;// from this wale list wil be resete
 	for( uint16_t i = 0 ; i < MAZE_PATH_SIZE ; i++ ){
+
 
 		if(idx > CMD_LIST_SIZE)
 			printf("Error while converting path to command: cmdList overflow array\n");
@@ -144,22 +348,28 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 
 				switch(pathList[i]){
 					case CMD_F:
-						x = 1;
+						x++;
 						state = CMD_STATE_ORTHO;
 						break;
 					case CMD_S:
+						cmdList[idx].dist = CELL_DIMENSION*x ;
+						cmdList[idx++].cmd = CMD_FWD0 +x;
 						state = CMD_STATE_STOP;
 						break;
 					case CMD_R:
-						cmdList[idx++] = CMD_IP90R;
+						//CMD_WritePossitionIntoCommand(&cmdList, cmdPrev, posIncrementX, posIncrementY, rotIncrement)
+						cmdList[idx++].cmd = CMD_IP90R;
+						x = 1;
 						state = CMD_STATE_START;
 						break;
 					case CMD_L:
-						cmdList[idx++] = CMD_IP90L;
+						cmdList[idx++].cmd = CMD_IP90L;
+						x = 1;
 						state = CMD_STATE_START;
 						break;
 					case CMD_B:
-						cmdList[idx++] = CMD_IP180L;
+						cmdList[idx++].cmd = CMD_IP180L;
+						x = 1;
 						state = CMD_STATE_START;
 						break;
 					default:
@@ -176,15 +386,27 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 						state = CMD_STATE_ORTHO;
 						break;
 					case CMD_L:
-						cmdList[idx++] = CMD_FWD0 +x;
+						cmdList[idx].dist = CELL_DIMENSION*x - initPosOffset;
+						initPosOffset = 0;
+						cmdList[idx++].cmd = CMD_FWD0 +x;
 						state = CMD_STATE_ORTHO_L;
 						break;
 					case CMD_R:
-						cmdList[idx++] = CMD_FWD0 +x;
+						cmdList[idx].dist = CELL_DIMENSION*x - initPosOffset;
+						initPosOffset = 0;
+						cmdList[idx++].cmd = CMD_FWD0 +x;
 						state = CMD_STATE_ORTHO_R;
 						break;
 					case CMD_S:
-						cmdList[idx++] = CMD_FWD0+x;
+						if(initPosOffset>0){
+							 //you are in middle and you will stop in the middle
+							cmdList[idx].dist = CELL_DIMENSION*x;
+						}else{
+							//you are at transition and you will stop in the middle
+							cmdList[idx].dist = CELL_DIMENSION*x -CELL_DIMENSION/2;
+						}
+						initPosOffset = 90;
+						cmdList[idx++].cmd = CMD_FWD0+x;
 						state = CMD_STATE_STOP;
 						break;
 					default:
@@ -197,12 +419,12 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 
 				switch(pathList[i]){
 					case CMD_F:
-						cmdList[idx++] = CMD_SS90SR;
+						cmdList[idx++].cmd = CMD_SS90SR;
 						x=2;
 						state = CMD_STATE_ORTHO;
 						break;
 					case CMD_L:
-						cmdList[idx++] = CMD_SD45R;
+						cmdList[idx++].cmd = CMD_SD45R;
 						x=2;
 						state = CMD_STATE_DIAG_RL;
 						break;
@@ -210,8 +432,9 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 						state = CMD_STATE_ORTHO_RR;
 						break;
 					case CMD_S:
-						cmdList[idx++] = CMD_SS90SR; //explore?
-						cmdList[idx++] = CMD_FWD1;
+						cmdList[idx++].cmd = CMD_SS90SR; //explore?
+						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
 					default:
@@ -224,12 +447,12 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 
 				switch(pathList[i]){
 					case CMD_F:
-						cmdList[idx++] = CMD_SS180R;
+						cmdList[idx++].cmd = CMD_SS180R;
 						x=2;
 						state = CMD_STATE_ORTHO;
 						break;
 					case CMD_L:
-						cmdList[idx++] = CMD_SD135R;
+						cmdList[idx++].cmd = CMD_SD135R;
 						x=2;
 						state = CMD_STATE_DIAG_RL;
 						break;
@@ -237,8 +460,9 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 						ERROR_STATE;
 						break;
 					case CMD_S:
-						cmdList[idx++] = CMD_SS180R;
-						cmdList[idx++] = CMD_FWD1;
+						cmdList[idx++].cmd = CMD_SS180R;
+						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
 					default:
@@ -251,7 +475,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 
 				switch(pathList[i]){
 					case CMD_F:
-						cmdList[idx++] = CMD_SS90SL;
+						cmdList[idx++].cmd = CMD_SS90SL;
 						x=2;
 						state = CMD_STATE_ORTHO;
 						break;
@@ -259,13 +483,14 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 						state = CMD_STATE_ORTHO_LL;
 						break;
 					case CMD_R:
-						cmdList[idx++] = CMD_SD45L;
+						cmdList[idx++].cmd = CMD_SD45L;
 						x=2;
 						state = CMD_STATE_DIAG_LR;
 						break;
 					case CMD_S:
-						cmdList[idx++] = CMD_SS90SR; //explore?
-						cmdList[idx++] = CMD_FWD1;
+						cmdList[idx++].cmd = CMD_SS90SR; //explore?
+						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
 					default:
@@ -278,7 +503,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 
 				switch(pathList[i]){
 					case CMD_F:
-						cmdList[idx++] = CMD_SS180L;
+						cmdList[idx++].cmd = CMD_SS180L;
 						x=2;
 						state = CMD_STATE_ORTHO;
 						break;
@@ -286,13 +511,14 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 						ERROR_STATE;
 						break;
 					case CMD_R:
-						cmdList[idx++] = CMD_SD135L;
+						cmdList[idx++].cmd = CMD_SD135L;
 						x=2;
 						state = CMD_STATE_DIAG_LR;
 						break;
 					case CMD_S:
-						cmdList[idx++] = CMD_SS180L;
-						cmdList[idx++] = CMD_FWD1;
+						cmdList[idx++].cmd = CMD_SS180L;
+						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
 					default:
@@ -305,8 +531,8 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 
 				switch(pathList[i]){
 					case CMD_F:
-						cmdList[idx++] = CMD_DIA0+x;
-						cmdList[idx++] = CMD_DS45R;
+						cmdList[idx++].cmd = CMD_DIA0+x;
+						cmdList[idx++].cmd = CMD_DS45R;
 						x=2;
 						state = CMD_STATE_ORTHO;
 						break;
@@ -318,9 +544,11 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 						state = CMD_STATE_DIAG_RR;
 						break;
 					case CMD_S:
-						cmdList[idx++] = CMD_DIA0+x;
-						cmdList[idx++] = CMD_DS45R;
-						cmdList[idx++] = CMD_FWD1;
+						//TODO DIAGONAL STOP CORRECTON
+						cmdList[idx++].cmd = CMD_DIA0+x;
+						cmdList[idx++].cmd = CMD_DS45R;
+						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
 					default:
@@ -333,8 +561,8 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 
 				switch(pathList[i]){
 					case CMD_F:
-						cmdList[idx++] = CMD_DIA0+x;
-						cmdList[idx++] = CMD_DS135L;
+						cmdList[idx++].cmd = CMD_DIA0+x;
+						cmdList[idx++].cmd = CMD_DS135L;
 						x=2;
 						state = CMD_STATE_ORTHO;
 						break;
@@ -342,15 +570,16 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 						ERROR_STATE;
 						break;
 					case CMD_R:
-						cmdList[idx++] = CMD_DIA0+x;
-						cmdList[idx++] = CMD_DD90L;
+						cmdList[idx++].cmd = CMD_DIA0+x;
+						cmdList[idx++].cmd = CMD_DD90L;
 						x=2;
 						state = CMD_STATE_DIAG_LR;
 						break;
 					case CMD_S:
-						cmdList[idx++] = CMD_DIA0+x;
-						cmdList[idx++] = CMD_DS135L;
-						cmdList[idx++] = CMD_FWD1;
+						cmdList[idx++].cmd = CMD_DIA0+x;
+						cmdList[idx++].cmd = CMD_DS135L;
+						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
 					default:
@@ -364,8 +593,8 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 			case CMD_STATE_DIAG_RL :
 				switch(pathList[i]){
 					case CMD_F:
-						cmdList[idx++] = CMD_DIA0+x;
-						cmdList[idx++] = CMD_DS45L;
+						cmdList[idx++].cmd = CMD_DIA0+x;
+						cmdList[idx++].cmd = CMD_DS45L;
 						x=2;
 						state = CMD_STATE_ORTHO;
 						break;
@@ -377,9 +606,10 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 						state = CMD_STATE_DIAG_LR;
 						break;
 					case CMD_S:
-						cmdList[idx++] = CMD_DIA0+x;
-						cmdList[idx++] = CMD_DS45L;
-						cmdList[idx++] = CMD_FWD1;
+						cmdList[idx++].cmd = CMD_DIA0+x;
+						cmdList[idx++].cmd = CMD_DS45L;
+						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
 					default:
@@ -392,14 +622,14 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 
 				switch(pathList[i]){
 					case CMD_F:
-						cmdList[idx++] = CMD_DIA0+x;
-						cmdList[idx++] = CMD_DS135R;
+						cmdList[idx++].cmd = CMD_DIA0+x;
+						cmdList[idx++].cmd = CMD_DS135R;
 						x=2;
 						state = CMD_STATE_ORTHO;
 						break;
 					case CMD_L:
-						cmdList[idx++] = CMD_DIA0+x;
-						cmdList[idx++] = CMD_DD90R;
+						cmdList[idx++].cmd = CMD_DIA0+x;
+						cmdList[idx++].cmd = CMD_DD90R;
 						x=2;
 						state = CMD_STATE_DIAG_RL;
 						break;
@@ -407,9 +637,10 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 						ERROR_STATE;
 						break;
 					case CMD_S:
-						cmdList[idx++] = CMD_DIA0+x;
-						cmdList[idx++] = CMD_DS135R;
-						cmdList[idx++] = CMD_FWD1;
+						cmdList[idx++].cmd = CMD_DIA0+x;
+						cmdList[idx++].cmd = CMD_DS135R;
+						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
 					default:
@@ -419,9 +650,15 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 				break;
 			//---------------------------------------------------
 			case CMD_STATE_STOP :
-				cmdList[idx++] = CMD_STOP;
+				cmdList[idx].dist = 0;
+				cmdList[idx++].cmd = CMD_STOP;
 				state = CMD_STATE_STOP;
+				// brake for loop
+				iEnd = i;
+				i = MAZE_PATH_SIZE;
+
 				break;
+
 
 			default :
 				// error
@@ -430,10 +667,31 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_T* cmdList){
 		}//end of switch
 
 
+		for(uint16_t j = prevIdx; j < idx ; j++){
+			//set abs direction to prev comands and cell address
+
+			if(i==MAZE_PATH_SIZE){ // path is over
+				cmdList[j].path = &absPath[iEnd];
+			}else{
+				cmdList[j].path = &absPath[i];
+			}
+		}
+		prevIdx = idx;
+
+
+
 	}//end of for
 
-	cmdList[idx++] = CMD_STOP;
 
+	// reset remaining items;
+	iEnd = (iEnd > 0 )? iEnd-1 : 0;
+	for(uint16_t i = idx-1; i < MAZE_PATH_SIZE ; i++){
+				//set abs direction to prev comands and cell address
+
+				cmdList[i].path = &absPath[iEnd];
+				cmdList[i].dist = 0;
+				cmdList[i].cmd = CMD_STOP;
+			}
 
 
 }

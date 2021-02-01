@@ -1,7 +1,7 @@
-instructions.c:27:7:INSTR_CalcAccel	0	static
-instructions.c:34:7:INSTR_CalcDist	0	static
-instructions.c:39:7:INSTR_CalcVel	8	static
-instructions.c:43:6:INSTR_AddArc	24	static
-instructions.c:382:6:INSTR_ResetInstrList	8	static
-instructions.c:89:10:INSTR_CmdToInstr	48	static
-instructions.c:13:6:INSTR_FillHalfList	8	static
+instructions.c:30:6:INSTR_FillList	24	static
+instructions.c:38:7:INSTR_CalcAccel	16	static
+instructions.c:45:7:INSTR_CalcDist	24	static
+instructions.c:50:7:INSTR_CalcVel	24	static
+instructions.c:54:6:INSTR_AddArc	48	static
+instructions.c:98:10:INSTR_CmdToInstr	56	static
+instructions.c:409:6:INSTR_ResetInstrList	24	static

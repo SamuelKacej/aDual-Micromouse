@@ -8,6 +8,7 @@
 
 #include "mouse.h"
 
+
 uint8_t orientationErrorPrev;
 CMD_T MOUSE_LastCMD;
 
@@ -28,43 +29,51 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 	 */
 
 
+	const uint8_t finalDest = 0x21;
 
 	uint16_t iterrationCnt = 0;
-
+	MOUSE_CellPosition = 0;
 	uint8_t actualPosition = 0x00;
 
 
 	while(1){
 
-		 MAZE_updatePath(actualPosition, 0x88); // 77, 78, 87, 88 are finsh cells
+		INSTR_CommandListIndex = 0;
+		 MAZE_updatePath(actualPosition, finalDest); // 77, 78, 87, 88 are finsh cells
+		 MAZE_updatePath(actualPosition, MAZE_path[1].cell->address); // move just one cell
 		 CMD_AbsolutePathToRelative( (MAZE_DIRECTIONS*) MAZE_path, CMD_directionList, MOUSE_CellOrientation);
 		 // you are searching so u know what's only one cell in front of you
-//		 CMD_directionList[1] = CMD_S;
-		 CMD_PathToCommand(CMD_directionList, CMD_commandList);
+		 //CMD_directionList[1] = CMD_S;
+		 CMD_PathToCommand(CMD_directionList, CMD_commandList, (MAZE_DIRECTIONS*) MAZE_path);
 
 		 INSTR_AverageVelocity = avgVel;
-		 MOUSE_PrepareToStart();
+//		 MOUSE_PrepareToStart();
 
-		 MOUSE_ChcekForNewComand();
-
-		 while(!MOUSE_ChcekForNewComand()){
+		// MOUSE_ChcekForNewComand();
+		 MOTION_UpdateList();
+		 MOTION_instrID = 0;
+		 do{ //cakam kym sa dokonci cely cmd
 
 			 //TODO : crash detection
-			 MOTION_UpdateList();
+
+
+
 			 if(MOUSE_isMouseInMiddleOfCell()){
 				 CMD_WALLS_RELATIVE detectedWalls ;
-				 detectedWalls.wall
-				 =  MOUSE_LookForWalls();
+				 detectedWalls.wall =  MOUSE_LookForWalls();
 				 MOUSE_WriteWalls(detectedWalls);
 
 			 }
 
 
-		 }
+			 //caka kym sa vykona potrebny pocet komandov teda kym neprijde posledny stop
+			 //Pozor nie 1 instrukcia ale vsetky instrukcie daneho cmd
+			MOUSE_ChcekForNewComand();
+		 }while(INSTR_InstrListUsedInstr!=MOTION_instrID );
 
 		 actualPosition = MOUSE_CellPosition;
-		 //finish
-		 if(     MOUSE_CellPosition == 0x77 ||\
+		 //finish // x77
+		 if(     MOUSE_CellPosition == finalDest ||\
 				 MOUSE_CellPosition == 0x78 ||\
 				 MOUSE_CellPosition == 0x87 ||\
 				 MOUSE_CellPosition == 0x88 ){
@@ -90,7 +99,7 @@ uint8_t MOUSE_SpeedRun( float avgVel ){
 
 	 MAZE_updatePath(0x00, 0x88); // 77, 78, 87, 88 are finsh cells
 	 CMD_AbsolutePathToRelative((MAZE_DIRECTIONS*)MAZE_path, CMD_directionList, MOUSE_CellOrientation);
-	 CMD_PathToCommand(CMD_directionList, CMD_commandList);
+	 CMD_PathToCommand(CMD_directionList, CMD_commandList,(MAZE_DIRECTIONS*)MAZE_path);
 
 	 INSTR_AverageVelocity = avgVel;
      MOUSE_PrepareToStart();
@@ -129,7 +138,7 @@ uint8_t MOUSE_ReturnToStart( float avgVel ){
 
 	MAZE_updatePath(MOUSE_CellPosition, 0x00);
 	CMD_AbsolutePathToRelative((MAZE_DIRECTIONS*)MAZE_path, CMD_directionList, MOUSE_CellOrientation);
-	CMD_PathToCommand(CMD_directionList, CMD_commandList);
+	CMD_PathToCommand(CMD_directionList, CMD_commandList, (MAZE_DIRECTIONS*)MAZE_path);
 
 	INSTR_AverageVelocity = avgVel;
 	MOUSE_PrepareToStart();
@@ -164,20 +173,33 @@ uint8_t MOUSE_UpdateAbsoluOrientation(){
 	 */
 
 
-//TODO HIGHEST PRIORITY
-	// TODO add corection values for new instruction
+//.T.ODO HIGHEST PRIORITY
+	// .T.ODO add corection values for new instruction
 	// corection will be made from mistake of position made in instruction processing
-	if (insList[MOTION_instrID].command != MOUSE_LastCMD){
-		MOUSE_LastCMD = insList[MOTION_instrID].command;
-		MOUSE_pathIdx++;
-		MOUSE_CellPositionPrev = MOUSE_CellPosition;
-		MOUSE_CellPosition = MAZE_path[MOUSE_pathIdx].cell->address;
-		MOUSE_CellOrientation = MAZE_path[MOUSE_pathIdx].absoluteDirection;
-		return 1;
-	}
 
-	return 0;
+	//if (insList[MOTION_instrID].command != MOUSE_LastCMD){
+
+
+	/*
+	 * To tu sa ma volat prave vtedy ked sa robot presunie z bunky do druhej bunky
+	 * a upadtne sa jej pozicia!
+	 *
+	 * */
+
+	MOUSE_LastCMD = insList[MOTION_instrID].command->cmd;
+			MOUSE_CellPosition = insList[MOTION_instrID].command->path->cell->address;
+			MOUSE_CellOrientation = (insList[MOTION_instrID].command->path->absoluteDirection == ROT_NULL)?\
+									MOUSE_CellOrientation : insList[MOTION_instrID].command->path->absoluteDirection;
+		return 1;
+	//}
+
+	//return 0;
 }
+
+
+static uint8_t prevContinuance;
+
+
 
 uint8_t MOUSE_ChcekForNewComand(){
 
@@ -185,14 +207,45 @@ uint8_t MOUSE_ChcekForNewComand(){
 	  * return 0 if cmd was not updated
 	  * return 1 if cmd was updated
 	 */
-	return MOUSE_UpdateAbsoluOrientation();
+
+	const INSTR_INSTRUCTION* currentInstruction = &insList[MOTION_instrID];
+
+
+
+
+
+
+	//static uint8_t prevContinuance = 0;
+
+	uint8_t cmdEnds = 0;
+	if (( prevContinuance > 50 && currentInstruction->continuance <50))// instruction was finished
+		cmdEnds = 1;
+
+	prevContinuance = currentInstruction->continuance;
+
+
+	if(cmdEnds)
+		MOUSE_UpdateAbsoluOrientation();
+	else if(currentInstruction->command->cmd == CMD_STOP)
+		return 1;
+	else
+	     return 0;
+
+
+
+
+
+
+
+
+
 	// TODO
 	/* Tato funkcia sa bude zaoberat presnim ukonceninm CMD, by CMD skoncil PRESNE na hrane.
-	 * Beznej je to priblizne na hrane, an toto potrebujem merania v bludisku
+	 * Bez nej je to priblizne na hrane, na toto potrebujem merania v bludisku
 	 * */
 
 
-	const INSTR_INSTRUCTION* currentInstruction = &insList[MOTION_instrID];
+	//const INSTR_INSTRUCTION* currentInstruction = &insList[MOTION_instrID];
 	const INSTR_INSTRUCTION* nextInstruction =  MOTION_GetNextInstruction(1);
 	//pozrisa aky je comand
 	//pozri ci je vzdialenost od end distance 18 cm pred koncom
@@ -206,6 +259,8 @@ uint8_t MOUSE_ChcekForNewComand(){
 	if(currentInstruction->command == CMD_STOP){
 		// STOP
 		// Robot should stop in the middle of the cell
+		//TODO: CALC middle of the cell
+		return 1;
 
 	}else if(currentInstruction->command >= CMD_FWD0 && currentInstruction->command <= CMD_FWD15){
 		// TODO  if next is stop
@@ -213,10 +268,11 @@ uint8_t MOUSE_ChcekForNewComand(){
 		// find last corner
 		// after you find it travel 90mm + c (c will be measured)
 		//
+		/* not requred anymore, instructions ware modified to include -90mm if stop
 		if(nextInstruction->command == CMD_STOP){
 			// stop 90mm before end -> middle of the cell
 		}
-
+		*/
 		//todo
 		//if robot travel > required distance - 180mm, it wil start to searching for border!
 
@@ -230,6 +286,8 @@ uint8_t MOUSE_ChcekForNewComand(){
 
 
 		// IF OK MOMENT MOTION_RequestNewInstruction = 1
+
+
 
 
 	}else if(currentInstruction->command >= CMD_DIA0 && currentInstruction->command <= CMD_DIA31){
@@ -262,17 +320,18 @@ uint8_t MOUSE_FindCornerInRotation(){
 	// is whole list updated?
 	if(INSTR_ListAlreadyUpdated == 1){
 
-		INSTR_INSTRUCTION* pInstr;
-		const uint8_t arrayLength = INSTR_LIST_HALF_SIZE *2;
+		const uint8_t arrayLength = INSTR_LIST_SIZE;
 
 		//TODO not sure if start from 1 or 0, probably from 1
 		for(uint8_t i = 1 ; i < arrayLength; i++){
 
-			pInstr =  MOTION_GetNextInstruction(i);
+
+			const CMD_T cmd = MOTION_GetNextInstruction(i)->command->cmd;
+
 
 			// is instruaction rotate command?
-			if(pInstr->command >= CMD_TRANSITON && pInstr->command <= CMD_DD90L){
-				return 1 + (pInstr->command%2);
+			if(cmd >= CMD_TRANSITON && cmd <= CMD_DD90L){
+				return 1 + (cmd%2);
 				// return 1=R or 2=L
 
 			}
@@ -284,6 +343,7 @@ uint8_t MOUSE_FindCornerInRotation(){
 	// in list is only forward/ diagonal/ stop => none turns
 
 }
+
 void MOUSE_PrepareToStart(){
 
 	// Nastav pociatocne natocenie podla prvej a druhej pozicie bunky v maze path
@@ -374,7 +434,7 @@ uint8_t MOUSE_LookForWalls(){
 
 	// filter
 	// yn = yn(t-T_smpl) + (y(t) - yn(t-T_smpl))/k_filtCoeficient;
-	static uint8_t sensorsDist[6] = {50, 50, 50, 50, 50, 50};
+	static uint8_t sensorsDist[6] = {80, 80, 80, 80, 80, 80};
 	const uint8_t k_filterCoeficient = 3;
 
 	for(uint8_t i = 0 ; i < 6 ; i++){
@@ -420,7 +480,7 @@ uint8_t MOUSE_WriteWalls(CMD_WALLS_RELATIVE wall){
 				// nemam naladu to pisat pekne... sorry
 	//right
 	if(prevWall.wall & wall.wall & 2)
-	MOUSE_WriteWallsToMaze(2);
+		MOUSE_WriteWallsToMaze(2);
 
 	//front
 	if(prevWall.wall & wall.wall & 4)
@@ -430,6 +490,7 @@ uint8_t MOUSE_WriteWalls(CMD_WALLS_RELATIVE wall){
 	if(prevWall.wall & wall.wall & 8)
 		MOUSE_WriteWallsToMaze(8);
 
+	prevWall.wall = wall.wall;
 	//TODO: return if was wall writen in the cell
 	return 0;
 

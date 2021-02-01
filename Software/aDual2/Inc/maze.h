@@ -23,7 +23,7 @@
  * |. .|. .|  _ _ _  |
  * |_|_._|_|_|_ _ _ _|
  * --------------------------> [X]
- *
+ * 0xXY
  *  ___C___
  * |       |
  * D       B
@@ -53,10 +53,53 @@ extern uint8_t MAZE_wasChanged;
 // 0 by default or if user change value;
 
 
-//TODO: wall/absoluteDirection enum with 0x0000 WNES
+
+typedef	struct{
+	// TODO IMPLEMENT this
+
+
+		/*
+		 *   	0x0000 WNES
+		 * 			 N
+		 * 		   ┌─4─┐
+		 * 		W 8│ 0 │2 E
+		 * 		   └─1─┘
+		 * 		     S
+		 */
+		uint8_t south : 1;
+		uint8_t east : 1;
+		uint8_t north : 1;
+		uint8_t west : 1;
+
+} MAZE_CELL_WALLS;
+
+typedef enum{
+	/*		 12     6
+	 * 		   ┌─4─┐
+	 * 		  8│ 0 │2
+	 * 		   └─1─┘
+	 *		  9     3
+	 */
+
+	//CMD prefix wa removed
+
+	ROT_NULL = 0,
+	ROT_SOUTH = 1,
+	ROT_EAST = 2,
+	ROT_NORTH = 4,
+	ROT_WEST = 8,
+
+	ROT_SE = ROT_SOUTH|ROT_EAST, // 3
+	ROT_NE = ROT_NORTH|ROT_EAST, // 6
+	ROT_NW = ROT_NORTH|ROT_WEST, // 12
+	ROT_SW = ROT_SOUTH|ROT_WEST  // 9
+
+
+}MAZE_ABSOLUTE_DIRECTION_T;
+
 typedef struct
 {
-	uint8_t wall; 	// b0000 DCBA
+	uint8_t wall; 	// b0000 DCBA   // todo change to  MAZE_CELL_WALLS
 				 	// wall of the cell
 
 	uint8_t cost; 	// price to cell for maze solving algorithm
@@ -66,10 +109,11 @@ typedef struct
 					// |y
 					// |__ __ x
 	/*    4
-	   ___C___
-	  |       |
+	  ┌───C───┐
+	  │       │
 	8 D       B 2
-	  |___A___|
+	  │		  │
+	  └───A───┘
 	  	  1
 	 */
 
@@ -79,20 +123,15 @@ typedef struct
 
 typedef struct{
 	MAZE_CELL* cell;  			// pointer to maze cell
-								//											 |y
-	uint8_t absoluteDirection; 	// Direction to next cell in absolute coord |__ __x
-								// value can be  0b0000 DCBA
+								//
+	MAZE_ABSOLUTE_DIRECTION_T absoluteDirection;
+								//											│y
+								// Direction to next cell in absolute coord │	 x
+								// value can be  0b0000 DCBA				└─────
 								// 0x00 mean STOP
 }MAZE_DIRECTIONS;
 
-typedef	struct{
-	// TODO IMPLEMENT this
-		uint8_t south : 1;
-		uint8_t east : 1;
-		uint8_t north : 1;
-		uint8_t west : 1;
 
-} MAZE_CELL_WALLS;
 
 volatile MAZE_CELL MAZE_maze[MAZE_SIZE_X * MAZE_SIZE_Y];			// maze
 volatile MAZE_DIRECTIONS MAZE_path[MAZE_PATH_SIZE];				// Maze path from position to position
