@@ -89,7 +89,7 @@ void SENSORS_Update(){
 
 	SENSORS_EncoderUpdateValues(); // 5us
 	SENSORS_AdcUpdateValues(); // this function takes around 110us
-	SENSORS_GyroUpdateValues(); //  takes  around 10ms
+	SENSORS_GyroUpdateValues(); //  call every 10ms
 
 	SENSORS_vectorsCalc(); // 5 us
 
@@ -135,7 +135,7 @@ void SENSORS_vectorsCalc(){
 
 	// TODO ak chces cez gyro filtrovat aj uhol musis sa usitit ze na zaciatku bol IRC a GYRO na rovnako...
 	SENSORS_anglePos 	= newAnglePos;
-	SENSORS_angleVel 	= (newAngleVel + SENSORS_xAngularVelocity)/2 ;
+	SENSORS_angleVel 	= (6*newAngleVel + 4*SENSORS_xAngularVelocity)/10 ;
 	SENSORS_angleAccel 	= newAngleAccel;
 	SENSORS_angleJerk 	= newAngleJerk;
 

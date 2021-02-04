@@ -93,10 +93,6 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-	FATFS myFatFS;
-	FIL myFile;
-	UINT myBytes;
-
 	uint16_t val;
 	volatile uint32_t MAIN_tmp;
 	float transV = 0; // mm/s
@@ -177,6 +173,7 @@ int main(void)
 
   MAIN_SetPIDs();
   MAZE_ClearMaze(MAZE_maze); //odstranil som &
+  CMD_clearList();
 
   // INIT CONTROLLERS
 
@@ -185,15 +182,11 @@ int main(void)
 
   HAL_TIM_Base_Start_IT(&htim12);// 5ms periodic timmer for controller update
 
- HAL_Delay(30);
+  HAL_Delay(30);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-
-
-
 
 	MOTOR_SetVoltage(1, 0);
 	MOTOR_SetVoltage(0, 0);
@@ -207,14 +200,8 @@ int main(void)
   while (1)
   {
 
-
-
-	  //SENSORS_xAngularVelocity = bno055_getGyroZ(&SENSORS_HI2C);
-
-
-
-	  if(SENSORS_batteryV[0] < 6800){
-	  	  		  //3.4V per cell
+	  if(SENSORS_batteryV[0] < 7300){
+	  	  		  //3.65V per cell
 
 	  	  while(1){
 
@@ -232,10 +219,26 @@ int main(void)
 	  	  }
 	    	  }
 
-	  vTest = MOUSE_LookForWalls();
+	  //vTest = MOUSE_LookForWalls();
+
+	  HAL_Delay(1500);
+	  MOUSE_SearchRun(300.0);
 
 
-	  MOUSE_SearchRun(500.0);
+
+	/*
+	 *
+	  MAUSE_Square( 0x43 );
+	  HAL_Delay(500);
+	  MAUSE_Square( 0x00 );
+
+	  char x[10];
+	  uint8_t len = sprintf(x,"%f \n\r",SENSORS_transPos);
+	  HAL_UART_Transmit(&huart3, (uint8_t*)x, len, 1000);
+	 */
+
+
+
 
 	  HAL_TIM_Base_Stop_IT(&htim12);
 	  MOTOR_SetVoltage(1, 0);
@@ -250,38 +253,11 @@ int main(void)
 		  }
   	HAL_TIM_Base_Start_IT(&htim12);
 
+
 	 // MOUSE_ReturnToStart((float)500);
 	 // MOUSE_SpeedRun((float)1000);
 
-	  //printing sensors distances;
-	 // printf("%i,\t %i,\t %i,\t %i,\t %i,\t %i\t \r\n",\
-			  SENSORS_irVal[0],\
-			  SENSORS_irVal[1],\
-			  SENSORS_irVal[2],\
-			  SENSORS_irVal[3],\
-			  SENSORS_irVal[4],\
-			  SENSORS_irVal[5]);
-
-
-
-	 // MAIN_tmp =0;
-	  /*
-	   * 1) write cells -> maze
-	   * 2) update path
-	   * 3) cmd absolut -> realative
-	   * 4) cmd -> instr
-	   * 5) motionUpdate( takes from instr)
-	   *
-	   *
-	   *
-	   */
-	  //TODO when to calc cell
-
-
-
-
-
-    /* USER CODE END WHILE */
+  	    /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
@@ -359,12 +335,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	  uint8_t len = sprintf(x,"%i, %.3f, %.3f, %.3f, %.3f \n\r",(int)(MAIN_GetMicros()/1000),
 			  MOTOR_currentController[1].U,
 			  MOTOR_velocityController[1].U*1000,
-			 MOTOR_velocityController[1].FB,
-			 MOTOR_velocityController[1].W);
+			  MOTOR_velocityController[1].FB,
+			  MOTOR_velocityController[1].W);
 
 	  HAL_UART_Transmit(&huart3, (uint8_t*)x, len, 1000);
-
 */
+
 
   } else if(htim->Instance == htim2.Instance)
 	  MAIN_seconds++;

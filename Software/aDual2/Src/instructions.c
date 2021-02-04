@@ -63,7 +63,8 @@ void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius,
 	 *
 	 */
 
-	radius *= 1.3;// nie je to KRUH, ale OVAL
+	//bolo tu 1,3, IP neslo dobre tak som to zmenil na 1,2
+	radius *= 1.2;// nie je to KRUH, ale OVAL
 
 	const float angleRad = angleDeg*PI/180;
 	const float absAngleRad = (angleRad>=0)?angleRad:-angleRad;
@@ -412,7 +413,7 @@ void INSTR_ResetInstrList(INSTR_INSTRUCTION* list, uint16_t length){
 	//function set every instruction in list to 0
 	for( uint16_t i=0  ; i< length ; i++){
 
-		list[i].command 	= CMD_commandList;
+		list[i].command 	= &CMD_commandList[0];
 		list[i].dist 		= 0;
 		list[i].speed		= 0;
 		list[i].accel		= 0;

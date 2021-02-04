@@ -130,6 +130,7 @@ void MOTION_ProcessedInstraction(INSTR_INSTRUCTION* instrActual){ // updated
 
 	// set volocity
 	MOTION_SetVelocity(newVelT, newVelA + MOTION_ExternalAngCorrection);
+	MOTION_ExternalAngCorrection = 0; // reset correction
 
 
 }
@@ -145,6 +146,8 @@ static float MOTION_SinusoidalVel(float phi, float time, float continuance){
 	 *
 	 */
 	//time = 1; // we calculate relative continuance, not velocity in total time;
+
+
 	return  phi * M_PI * sin(M_PI*continuance) / (2*time);
 }
 
@@ -199,7 +202,7 @@ void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float* angul
 			// TODO overshoot protection
 
 			// translational vector is controled by angular vector, for synchronization;
-			*transVel = instr->speed * pow(2,(-(transContiunacne - angleContinuance)));
+			*transVel = instr->speed * pow(2,( angleContinuance - transContiunacne));
 
 		}
 	} else if (instr->accel !=0){
@@ -310,50 +313,6 @@ void MOTION_resetList(int id){
 	insList[id].time		= 0;
 
 }
-/*
-void MOTION_uTurnTest(){
-//Z turne
-
-	const int vel = 1000;
-
-	int id = 0;
-	MOTION_resetList(id);
-	id++;
-
-
-	MOTION_resetList(id);
-	insList[id].command = CMD_FWD0 + 1;
-	insList[id].dist   	= CELL_DIMENSION;
-	insList[id].speed  	= vel;
-	insList[id].accel	= vel*vel/2/CELL_DIMENSION;
-	id++;
-
-	MOTION_resetList(id);
-	insList[id].command = CMD_FWD0 + 1;
-	insList[id].dist   	= CELL_DIMENSION;
-	insList[id].speed  	= 2*vel;
-	insList[id].accel	= 0;
-	id++;
- /*
-	MOTION_resetList(id);
-	insList[id].command = CMD_FWD0 + 1;
-	insList[id].dist   	= 1*CELL_DIMENSION;
-	insList[id].speed  	= 0;
-	insList[id].accel	= -vel*vel/CELL_DIMENSION;
-	id++;
-
-	MOTION_resetList(id);
-	id++;
-
-
-	MOTION_resetList(id);
-	id++;
-
-	MOTION_resetList(id);
-	INSTR_InstrListUsedInstr[0] = id;
-	INSTR_InstrListUsedInstr[1] = 0;
-
-}*/
 
 static uint8_t MOTION_GetNextInstrID(uint8_t idOffset){
 	// TODO recreate this fcn

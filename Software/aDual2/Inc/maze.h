@@ -146,5 +146,4 @@ uint8_t MAZE_reverseDirection(uint8_t);
 MAZE_CELL* MAZE_findCheapestNeighbor(MAZE_CELL*, uint8_t*);
 void MAZE_SetCostOfNeighbors(MAZE_CELL*, uint8_t);
 void MAZE_ClearMaze(MAZE_CELL*);
-
 #endif /* MAZE_H_ */

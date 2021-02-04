@@ -13,6 +13,7 @@ void CMD_clearList(){
 	for(uint16_t i = 0 ; i < CMD_LIST_SIZE ; i++){
 		CMD_commandList[i].cmd = CMD_STOP;
 		CMD_commandList[i].dist = 0;
+		CMD_commandList[i].path = &MAZE_path[0];
 	}
 
 }
@@ -78,7 +79,7 @@ uint8_t CMD_DirectionRotate(int8_t dir,	int8_t* rotation){
 
 }
 
-uint8_t CMD_RelativeWallToAbsolute(CMD_WALLS_RELATIVE dirRel, uint8_t rotation){
+uint8_t CMD_RelativeWallToAbsolute(CMD_WALLS_RELATIVE dirRel, MAZE_ABSOLUTE_DIRECTION_T rotation){
 	/*
 	 * transform relative
 	 *
@@ -104,25 +105,27 @@ uint8_t CMD_RelativeWallToAbsolute(CMD_WALLS_RELATIVE dirRel, uint8_t rotation){
 
 	//sorry for this, i know it can be written more in pro style...
 	switch (rotation){
-		case 1: // backward
+		case ROT_SOUTH: // backward
 			out |= dirRel.WALL.right << 3;
 			out |= dirRel.WALL.front << 0;
 			out |= dirRel.WALL.left  << 1;
 			break;
-		case 2: // left
-			out |= dirRel.WALL.right << 3;
-			out |= dirRel.WALL.front << 0;
-			out |= dirRel.WALL.left  << 1;
+		case ROT_EAST: // right
+			out |= dirRel.WALL.right << 0;
+			out |= dirRel.WALL.front << 1;
+			out |= dirRel.WALL.left  << 2;
 			break;
-		case 4: // backward
+		case ROT_NORTH: // forward
 			out |= dirRel.WALL.right << 1;
 			out |= dirRel.WALL.front << 2;
 			out |= dirRel.WALL.left  << 3;
 			break;
-		case 8: // right
+		case ROT_WEST: // left
 			out |= dirRel.WALL.right << 2;
 			out |= dirRel.WALL.front << 3;
 			out |= dirRel.WALL.left  << 0;
+			break;
+		default:
 			break;
 	}
 	return out;
