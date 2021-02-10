@@ -153,7 +153,7 @@ float bno055_getGyroY(I2C_HandleTypeDef* hi2c1){
 }
 float bno055_getGyroZ(I2C_HandleTypeDef* hi2c1){
 	//  return value is in rad/s, unit in UNIT_SEL_ADDR must be set to rad/s
-	return (float)((int16_t )bno055_read16(hi2c1, BNO055_GYRO_DATA_Z_LSB_ADDR ))/900;
+	return (float)((int16_t )bno055_read16(hi2c1, BNO055_GYRO_DATA_Z_LSB_ADDR ))*2/900;
 }
 float bno055_getLinAccelX(I2C_HandleTypeDef* hi2c1){
 	//  return value is in m/s/s, unit in UNIT_SEL_ADDR must be set to m/s/s

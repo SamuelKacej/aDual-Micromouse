@@ -33,7 +33,7 @@ Src/sensors.o: ../Src/sensors.c ../Inc/sensors.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h ../Inc/main.h \
- ../Inc/BNO055.h ../Inc/adc.h ../Inc/i2c.h ../Inc/tim.h
+ ../Inc/BNO055.h ../Inc/adc.h ../Inc/i2c.h ../Inc/tim.h ../Inc/usart.h
 
 ../Inc/sensors.h:
 
@@ -114,3 +114,5 @@ Src/sensors.o: ../Src/sensors.c ../Inc/sensors.h \
 ../Inc/i2c.h:
 
 ../Inc/tim.h:
+
+../Inc/usart.h:

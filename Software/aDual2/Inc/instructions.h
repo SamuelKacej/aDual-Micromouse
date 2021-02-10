@@ -67,6 +67,7 @@ typedef struct _INSTRUCTION_{
 		float	distBegin;	// mm, dist at begin of instruction
 		float	distEnd; 	// mm, distance at the end of instruction
 
+
 	// ROTATION
 
 		// sinusoidal movement
@@ -79,6 +80,10 @@ typedef struct _INSTRUCTION_{
 		float time;			// s	, used for inplace turns
 
 		uint8_t continuance;// 0-100%
+
+		// if next instraction start at different velocity (mainly stop)
+		uint8_t slowDownCont; // continuance at which it start deaccelereting (-accel)
+							  //if cont>slowDownCont? accel = -accel
 
 		struct _INSTRUCTION_* next;
 

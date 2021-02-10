@@ -35,7 +35,7 @@ Src/motionSystem.o: ../Src/motionSystem.c ../Inc/motionSystem.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
  ../Inc/instructions.h ../Inc/command.h ../Inc/maze.h ../Inc/motor.h \
  ../Inc/actuator.h ../Inc/tim.h ../Inc/sensors.h ../Inc/BNO055.h \
- ../Inc/adc.h ../Inc/i2c.h
+ ../Inc/adc.h ../Inc/i2c.h ../Inc/usart.h
 
 ../Inc/motionSystem.h:
 
@@ -128,3 +128,5 @@ Src/motionSystem.o: ../Src/motionSystem.c ../Inc/motionSystem.h \
 ../Inc/adc.h:
 
 ../Inc/i2c.h:
+
+../Inc/usart.h:

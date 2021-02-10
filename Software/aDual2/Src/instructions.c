@@ -42,9 +42,10 @@ float INSTR_CalcAccel(uint16_t vStart, uint16_t vTarget, uint16_t distance){
 	return ((int16_t)(vTarget - vStart)) / (2* distance/(vStart+vTarget));
 
 }
-float INSTR_CalcDist(uint16_t vStart, uint16_t vTarget, uint16_t accel){
+float INSTR_CalcDist(uint16_t vStart, uint16_t vTarget, int16_t accel){
+	//mm
 	// return distance traveled until you accelerate from vStart to vTarg
-	const float time = (vTarget-vStart)/accel;
+	const float time = ((float)vTarget-vStart)/accel;
 	return time*(vTarget+vStart)/2;
 }
 float INSTR_CalcVel(uint16_t vStart, uint16_t dist, uint16_t accel){
@@ -63,10 +64,9 @@ void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius,
 	 *
 	 */
 
-	//bolo tu 1,3, IP neslo dobre tak som to zmenil na 1,2
-	radius *= 1.2;// nie je to KRUH, ale OVAL
+	radius *= 1.3;// nie je to KRUH, ale OVAL
 
-	const float angleRad = angleDeg*PI/180;
+	float angleRad = angleDeg*PI/180;
 	const float absAngleRad = (angleRad>=0)?angleRad:-angleRad;
 	// TODO: presny vypocet kryvky zakruty, nie je to kruh !!!!!
 
@@ -83,6 +83,8 @@ void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius,
 		timeArc = absAngleRad*180/ transVelocity;// in-place turn
 												 // it will take same time as SS90deg turn
 		transVelocity = 0;						 // no radius => no arc :)
+
+		//angleRad *= 1.2; // compenstaion for 4 wheel
 	}
 
 
@@ -134,7 +136,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 				// first and last instructions are empty
 
 				id++;
-				INSTR_AddArc(&insList[id], -45, 0, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -45, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
 				id +=2;// 1 +1(empty)
 
 				break;
@@ -142,7 +144,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP45L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +45, 0, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +45, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
 				id +=2;// 1 +1(empty)
 
 				break;
@@ -150,7 +152,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP90R:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], -90, 0, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -90, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -158,7 +160,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP90L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +90, 0, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +90, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -166,7 +168,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP135R:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], -135, 0, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -135, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -174,7 +176,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP135L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +135, 0, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +135, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -182,7 +184,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP180R:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], -180, 0, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -180, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -190,7 +192,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP180L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +180, 0, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +180, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -315,6 +317,20 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 						id++;
 
 
+					}else if(cmdList[(*idc)+1].cmd == CMD_STOP){
+						// next cmd wil be stop -> so slow down to 80mm/s
+
+						const float slowDownDist = INSTR_CalcDist(INSTR_AverageVelocity, 0, -INSTR_MaxTransAccel);
+
+						insList[id].command = &cmdList[*idc];
+						insList[id].dist    = cmdList[*idc].dist;
+						insList[id].speed   = INSTR_AverageVelocity;
+						insList[id].accel   = INSTR_MaxTransAccel;
+						insList[id].slowDownCont = 997-(uint8_t)(100*slowDownDist/cmdList[*idc].dist);
+						id++;
+					// maybe replace 100 with 102 to have little over shoot to make sure instr will be proceesed to finish
+
+
 					}else{
 						// const velocity
 
@@ -424,6 +440,7 @@ void INSTR_ResetInstrList(INSTR_INSTRUCTION* list, uint16_t length){
 		list[i].angleEnd	= 0;
 		list[i].time		= 0;
 		list[i].continuance = 0;
+		list[i].slowDownCont= 200; // default is never
 		list[i].next 		= &list[i+1];
 
 	}

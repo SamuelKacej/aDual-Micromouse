@@ -1,0 +1,6 @@
+mapping.c:12:9:MAPPING_isTimeToReadSideWall	16	static
+mapping.c:26:9:MAPPING_isTimeToReadFrontWall	16	static
+mapping.c:41:9:MAPPING_LookForWalls	24	static
+mapping.c:158:6:MAPPING_WriteWallsToMaze	24	static
+mapping.c:166:9:MAPPING_WriteWalls	16	static
+mapping.c:186:6:MAPPING_PrintMaze	128	dynamic

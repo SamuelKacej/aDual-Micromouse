@@ -401,6 +401,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 						state = CMD_STATE_ORTHO_R;
 						break;
 					case CMD_S:
+
 						if(initPosOffset>0){
 							 //you are in middle and you will stop in the middle
 							cmdList[idx].dist = CELL_DIMENSION*x;
@@ -408,6 +409,8 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 							//you are at transition and you will stop in the middle
 							cmdList[idx].dist = CELL_DIMENSION*x -CELL_DIMENSION/2;
 						}
+
+						// todo SLOW DOWN
 						initPosOffset = 90;
 						cmdList[idx++].cmd = CMD_FWD0+x;
 						state = CMD_STATE_STOP;

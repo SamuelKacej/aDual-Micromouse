@@ -46,23 +46,21 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 
 	MOUSE_CellPosition = 0;
 	MOUSE_CellOrientation = ROT_NORTH;
-	uint8_t actualPosition = 0x00;
 
 
-	for(uint8_t i = 0; i<5; i++){
-		CMD_WALLS_RELATIVE detectedWalls ;
-		detectedWalls.wall =  MOUSE_LookForWalls();
-		MOUSE_WriteWalls(detectedWalls);
+	CMD_WALLS_RELATIVE detectedWalls ;
+	for(uint8_t i = 0; i<35; i++){
+		detectedWalls.wall =  MAPPING_LookForWalls(0b111);
 	 }
-
-
+	detectedWalls.wall = MAPPING_LookForWalls(0b000);
+	MAPPING_WriteWalls(detectedWalls, MOUSE_CellPosition, MOUSE_CellOrientation);
 	//MOUSE_PrintMaze();
 
 	while(1){
 
 		 INSTR_CommandListIndex = 0;
-		 MOUSE_PrintMaze();
-		 HAL_Delay(500);
+		 //MOUSE_PrintMaze();
+		 HAL_Delay(50);
 
 		 MAZE_updatePath(MOUSE_CellPosition, finalDest); // 77, 78, 87, 88 are finsh cells
 		 MAZE_updatePath(MOUSE_CellPosition, MAZE_path[1].cell->address); // move just one cell
@@ -73,40 +71,49 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 
 		 MOTION_UpdateList();
 		 MOTION_instrID = 0;
+		 detectedWalls.wall = 0;
+
 		 do{
 
 			 //TODO : crash detection
 
-
-			 //MOUSE_printSensDist();
 			 // writing walls
-			 if(MOUSE_isMouseInMiddleOfCell()){
-				 ACTUATOR_LED(80, -1, -1);
-				 CMD_WALLS_RELATIVE detectedWalls ;
-				 detectedWalls.wall =  MOUSE_LookForWalls();
-				 MOUSE_WriteWalls(detectedWalls);
 
-			 }else{
-				 ACTUATOR_LED(0, 60, 0);
-				 // correct parallel to wall
-
-				 if(MOUSE_isPositionForSideCorrection()){
-
-					 ACTUATOR_LED(-1, 0, 70);
-					 MOUSE_CorrectionSide();
-
-				 }
-
-
+			 if(MAPPING_isTimeToReadSideWall()){
+				 detectedWalls.wall |= 0b1010 & MAPPING_LookForWalls(0b100);
+			 }
+			 if(MAPPING_isTimeToReadFrontWall()){
+				 detectedWalls.wall |= 0b0100 & MAPPING_LookForWalls(0b001);
 			 }
 
+			 if(CORR_isPositionForSideCorrection()){
+				 ACTUATOR_LED(0, 30, -1);
+				 CORR_ParallelToSide();
+			 }else{
+				 ACTUATOR_LED(0, 0, -1);
+			 }
+
+			 HAL_Delay(1);
+			 //printf(" %u %u %u\r\n", detectedWalls.WALL.left, detectedWalls.WALL.front, detectedWalls.WALL.right);
 
 			 //caka kym sa vykona potrebny pocet komandov teda kym neprijde posledny stop
 			 //Pozor nie 1 instrukcia ale vsetky instrukcie daneho cmd
 			MOUSE_ChcekForNewComand();
 		 }while(INSTR_InstrListUsedInstr!=MOTION_instrID );
 
-		//
+
+		 detectedWalls.wall = MAPPING_LookForWalls(0b000);
+		// mozno bude treba pridat positon
+		 MAPPING_WriteWalls(detectedWalls, MOUSE_CellPosition, MOUSE_CellOrientation);
+
+		 // front wall corection at place if there is wall;
+		 if(detectedWalls.wall & 0b0100 ){
+			 ACTUATOR_LED(150, -1, -1);
+			 CORR_PerpendicularToForward();
+			 ACTUATOR_LED(0, -1, -1);
+		 }
+
+		 //MAPPING_PrintMaze(MOUSE_CellPosition);
 		 //finish // x77
 		 if(     MOUSE_CellPosition == finalDest ||\
 				 MOUSE_CellPosition == 0x78 ||\
@@ -207,13 +214,8 @@ uint8_t MOUSE_UpdateAbsoluOrientation(){
 	 */
 
 
-//.T.ODO HIGHEST PRIORITY
-	// .T.ODO add corection values for new instruction
+ 	// TODO add corection values for new instruction
 	// corection will be made from mistake of position made in instruction processing
-
-	//if (insList[MOTION_instrID].command != MOUSE_LastCMD){
-
-
 	/*
 	 * To tu sa ma volat prave vtedy ked sa robot presunie z bunky do druhej bunky
 	 * a upadtne sa jej pozicia!
@@ -225,15 +227,8 @@ uint8_t MOUSE_UpdateAbsoluOrientation(){
 			MOUSE_CellOrientation = (insList[MOTION_instrID].command->path->absoluteDirection == ROT_NULL)?\
 									MOUSE_CellOrientation : insList[MOTION_instrID].command->path->absoluteDirection;
 		return 1;
-	//}
 
-	//return 0;
 }
-
-
-static uint8_t prevContinuance;
-
-
 
 uint8_t MOUSE_ChcekForNewComand(){
 
@@ -243,13 +238,8 @@ uint8_t MOUSE_ChcekForNewComand(){
 	 */
 
 	const INSTR_INSTRUCTION* currentInstruction = &insList[MOTION_instrID];
-
-
-
-
-
-
 	//static uint8_t prevContinuance = 0;
+	static uint8_t prevContinuance = 0;
 
 	uint8_t cmdEnds = 0;
 	if (( prevContinuance > 50 && currentInstruction->continuance <50))// instruction was finished
@@ -341,393 +331,5 @@ uint8_t MOUSE_ChcekForNewComand(){
 	// Diagonal left turn
 
 	// In place turns
-
-}
-
-uint8_t MOUSE_FindCornerInRotation(){
-	// this function will tell if robot will in future turn to right/left
-	// return 0 -> nor right/ left turn
-	// return 1 -> R
-	// return 2 -> L
-
-
-	// is whole list updated?
-	if(INSTR_ListAlreadyUpdated == 1){
-
-		const uint8_t arrayLength = INSTR_LIST_SIZE;
-
-		//TODO not sure if start from 1 or 0, probably from 1
-		for(uint8_t i = 1 ; i < arrayLength; i++){
-
-
-			const CMD_T cmd = MOTION_GetNextInstruction(i)->command->cmd;
-
-
-			// is instruaction rotate command?
-			if(cmd >= CMD_TRANSITON && cmd <= CMD_DD90L){
-				return 1 + (cmd%2);
-				// return 1=R or 2=L
-
-			}
-		}
-	}
-
-
-	return 0;
-	// in list is only forward/ diagonal/ stop => none turns
-
-}
-
-void MOUSE_PrepareToStart(){
-
-	// Nastav pociatocne natocenie podla prvej a druhej pozicie bunky v maze path
-
-
-	const uint8_t  requireDirection = MAZE_path[0].absoluteDirection;
-
-	// transform mouse 8 directional model, to maze 4 directional model
-	const uint8_t actualDirection = 1 << ((MOUSE_CellOrientation-1)>>1);
-
-	const int8_t difference = actualDirection - requireDirection ;
-
-	switch(difference){
-		case 0:
-			return;
-			break;
-
-		case -7:
-		case  4:
-		case  2:
-		case  1:
-			//IP  right turn, -90
-			MOTION_inPlaceRotation(-90);
-			break;
-
-		case  7:
-		case -4:
-		case -2:
-		case -1:
-			//IP left turn, 90
-			MOTION_inPlaceRotation(90);
-			break;
-
-		case  6:
-		case -6:
-		case  3:
-		case -3:
-			// IP 180
-			MOTION_inPlaceRotation(180);
-			break;
-
-	}
-
-
-
-}
-
-void MOUSE_CorrectionDiagonal(){
-
-}
-
-void MOUSE_CorrectionForward(){
-
-
-	// use [0] [5] or [1] [4]
-	const uint8_t disR = SENSORS_irDistance[0];
-	const uint8_t disL = SENSORS_irDistance[5];
-
-	int8_t error = 0;
-
-
-
-	if( disR < 60 && disL < 60){
-		error = disL - disR;
-	}else if(disR < 60){
-		error = MOUSE_DISTANCE_FROM_WALL - disR;
-	}else if(disL < 60){
-		error = disL - MOUSE_DISTANCE_FROM_WALL;
-	}
-
-	//MOTION_ExternalAngCorrection = 0.1 * (error + 0.5*(error - orientationErrorPrev));
-}
-void MOUSE_CorrectionSide(){
-	// call this fcn when you are in command_finsh_cell
-
-	// get finish address of actual cell
-	//const uint8_t addr = INSTR_InstrList[MOTION_instrID].command->path->cell;
-
-	//TODO: add existance of the wall from map
-
-	// use [2] [3] or [1] [4]
-	const uint8_t disR = SENSORS_irDistance[2];
-	const uint8_t disL = SENSORS_irDistance[3];
-
-
-
-	static uint32_t prevTime = 0;
-	static int8_t orientationErrorPrev = 0;
-	int8_t error = 0;
-
-
-	const uint8_t distanceFromWall = 80; //mm
-	if( disR < distanceFromWall && disL < distanceFromWall){
-		error = disL - disR;
-	}else if(disR < distanceFromWall){
-		error = MOUSE_DISTANCE_FROM_WALL - disR;
-	}else if(disL < distanceFromWall){
-		error = disL - MOUSE_DISTANCE_FROM_WALL;
-	}
-
-	/*
-	char s[30];
-	const uint8_t len = sprintf(s, "%u, \t%u, \t%i, \t%.3f \r\n",disL, disR, error, MOTION_ExternalAngCorrection );
-	HAL_UART_Transmit(&huart3, (uint8_t*)s, len, 1000);
-	*/
-	const uint32_t time = MAIN_GetMicros();
-	const float D_component = ((float)(error - orientationErrorPrev))/(time - prevTime) *1e6;
-	MOTION_ExternalAngCorrection = 0.06*(float)error + 1e-4*D_component;
-
-	orientationErrorPrev = error;
-	prevTime = time;
-}
-void MOUSE_CorrectionRotation(){
-	// TODO: Correction with front or side wall
-}
-
-uint8_t MOUSE_isMouseInMiddleOfCell(){
-
-	// For now you detect walls only
-	if( INSTR_InstrList[MOTION_instrID].command->cmd == CMD_FWD1){
-		const uint8_t cont = INSTR_InstrList[MOTION_instrID].continuance ;
-		if( cont > 45 && cont < 70 ){
-			return 1;
-		}
-	}
-	return 0;
-
-}
-
-uint8_t MOUSE_isPositionForSideCorrection(){
-
-
-	if( INSTR_InstrList[MOTION_instrID].command->cmd == CMD_FWD1){
-		const uint8_t cont = INSTR_InstrList[MOTION_instrID].continuance ;
-		if( (cont > 10 && cont < 20)||(cont > 70 && cont < 90) ){
-			return 1;
-		}
-	}
-	return 0;
-
-}
-
-uint8_t MOUSE_LookForWalls(){
-	// retrun walls that robot can see
-
-
-	// filter
-	// yn = yn(t-T_smpl) + (y(t) - yn(t-T_smpl))/k_filtCoeficient;
-	static uint8_t sensorsDist[6] = {80, 80, 80, 80, 80, 80};
-	const uint8_t k_filterCoeficient = 3;
-
-	for(uint8_t i = 0 ; i < 6 ; i++){
-		sensorsDist[i] = sensorsDist[i] + (SENSORS_irDistance[i]-sensorsDist[i])/k_filterCoeficient;
-	}
-
-	// decide if is there wall
-	// TODO fuzzy or neural network
-	CMD_WALLS_RELATIVE wall;
-
-	wall.wall = 0;
-
-
-	// right
-	if(sensorsDist[2] < MOUSE_WALL_TRESHOLD_SIDE)
-		wall.WALL.right = 1;
-
-	//left
-	if(sensorsDist[3] < MOUSE_WALL_TRESHOLD_SIDE)
-		wall.WALL.left = 1;
-
-
-	if((sensorsDist[0]+sensorsDist[5])/2 < MOUSE_WALL_TRESHOLD_FRONT)
-		wall.WALL.front = 1;
-
-	return wall.wall;
-}
-
-void MOUSE_WriteWallsToMaze(uint8_t wallid, uint8_t position){
-
-	const uint8_t absWall = CMD_RelativeWallToAbsolute((CMD_WALLS_RELATIVE)wallid, MOUSE_CellOrientation);
-
-	const uint8_t newWall = absWall | MAZE_maze[position].wall;
-	MAZE_writeCell(position, newWall, 0xFF);
-}
-
-uint8_t MOUSE_WriteWalls(CMD_WALLS_RELATIVE wall){
-
-
-	// pozri ci su 2 za sebou rovnake spravi o tom ze tam je wall
-
-	static CMD_WALLS_RELATIVE prevWall;
-
-
-	const uint8_t pos = INSTR_InstrList[MOTION_instrID].next->command->path->cell->address;
-
-	//right
-	if(prevWall.wall & wall.wall & 2)
-		MOUSE_WriteWallsToMaze(2, pos);
-
-	//front
-	if(prevWall.wall & wall.wall & 4)
-		MOUSE_WriteWallsToMaze(4, pos);
-
-	//left
-	if(prevWall.wall & wall.wall & 8)
-		MOUSE_WriteWallsToMaze(8, pos);
-
-	prevWall.wall = wall.wall;
-	//TODO: return if was wall writen in the cell
-	return 0;
-
-}
-
-
-void MOUSE_PrintMaze(){
-
-
-	const uint8_t size = MAZE_SIZE_X;
-
-	//wall Horizontal line
-	uint16_t wH[size];
-
-	//wall Vertical line
-	uint16_t wV[size];
-
-	// set's array to 0
-	for(uint8_t i = 0; i<size; i++){
-		wH[i] = 0;
-		wV[i] = 0;
-	}
-
-
-	for(uint16_t i = 0 ; i < size ; i++){
-		for(uint16_t j = 0 ; j < size ; j++){
-
-			wH[i] |= (uint32_t)((MAZE_maze[MAZE_ADDR(j,i)].wall & 0b0001)>>0)<<j;
-
-			wV[i] |= (uint32_t)((MAZE_maze[MAZE_ADDR(i,j)].wall & 0b1000)>>3)<<j;
-
-		}
-	}
-
-	// chcek the wall from other cell
-	// OR
-	for(uint16_t i = 0 ; i < size-1 ; i++){
-		for(uint16_t j = 0 ; j < size-1 ; j++){
-
-			wH[i+1] |= (uint32_t)((MAZE_maze[MAZE_ADDR(j,i)].wall & 0b0100)>>2)<<(j);
-
-			wV[i+1] |= (uint32_t)((MAZE_maze[MAZE_ADDR(i,j)].wall & 0b0010)>>1)<<(j);
-
-		}
-	}
-
-	// printing
-	char s[39] = "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\r\n";
-	HAL_UART_Transmit(&huart3, (uint8_t*)s, 38, 1000);
-
-	for(uint16_t i = 0 ; i < 2*size ; i++){
-
-			for(uint16_t j = 0 ; j < size ; j++){
-
-				if(i%2==0){
-					s[2*j +0] = ((wV[j] & (1<<(size-1-i/2)))>0)? '|':' ';
-					s[2*j +1] = (MOUSE_CellPosition == MAZE_ADDR(j,size-1-i/2))? 'X': ' ';
-				}else{
-					//├
-					s[2*j +1] = ((wH[size-1-i/2] & (1<<j))>0)? '-':' ';
-					s[2*j +0] = '+';
-				}
-			}
-			s[32] = '|';
-			s[33] = '\n';
-			s[34] = '\r';
-			s[35] = '\0';
-
-			HAL_UART_Transmit(&huart3, (uint8_t*)s, 36, 1000);
-		}
-
-
-	const char str[] = "#\r\n";
-	HAL_UART_Transmit(&huart3, (uint8_t*)str, 3, 1000);
-
-
-}
-void MAUSE_SetMazeSquare(){
-	MAZE_maze[MAZE_ADDR(0,0)].wall = 0b1001;
-	MAZE_maze[MAZE_ADDR(0,1)].wall = 0b1010;
-	MAZE_maze[MAZE_ADDR(0,2)].wall = 0b1010;
-	MAZE_maze[MAZE_ADDR(0,3)].wall = 0b1100;
-
-	MAZE_maze[MAZE_ADDR(1,0)].wall = 0b0101;
-	MAZE_maze[MAZE_ADDR(1,3)].wall = 0b0101;
-
-	MAZE_maze[MAZE_ADDR(2,0)].wall = 0b0101;
-	MAZE_maze[MAZE_ADDR(2,3)].wall = 0b0101;
-
-	MAZE_maze[MAZE_ADDR(3,0)].wall = 0b0101;
-	MAZE_maze[MAZE_ADDR(3,3)].wall = 0b0101;
-
-
-	MAZE_maze[MAZE_ADDR(4,0)].wall = 0b0011;
-	MAZE_maze[MAZE_ADDR(4,1)].wall = 0b1010;
-	MAZE_maze[MAZE_ADDR(4,2)].wall = 0b1010;
-	MAZE_maze[MAZE_ADDR(4,3)].wall = 0b0110;
-
-}
-void MAUSE_Square( const uint8_t finalDest ){
-
-
-		MAUSE_SetMazeSquare();
-
-		while(1){
-
-			INSTR_CommandListIndex = 0;
-
-			 MAZE_updatePath(MOUSE_CellPosition, finalDest);
-			 MAZE_updatePath(MOUSE_CellPosition, MAZE_path[1].cell->address); // move just one cell
-			 CMD_AbsolutePathToRelative( (MAZE_DIRECTIONS*) MAZE_path, CMD_directionList, MOUSE_CellOrientation);
-			 CMD_PathToCommand(CMD_directionList, CMD_commandList, (MAZE_DIRECTIONS*) MAZE_path);
-
-			 INSTR_AverageVelocity = 500;
-
-			 MOTION_UpdateList();
-			 MOTION_instrID = 0;
-			 do{
-
-				 //MOUSE_printSensDist();
-				 ACTUATOR_LED(0, 60, 0);
-
-				 // correct parallel to wall
-				 if(MOUSE_isPositionForSideCorrection()){
-
-					 ACTUATOR_LED(-1, 0, 70);
-					 MOUSE_CorrectionSide();
-
-				 }
-
-
-				 //caka kym sa vykona potrebny pocet komandov teda kym neprijde posledny stop
-				 //Pozor nie 1 instrukcia ale vsetky instrukcie daneho cmd
-				MOUSE_ChcekForNewComand();
-			 }while(INSTR_InstrListUsedInstr!=MOTION_instrID );
-			 if(     MOUSE_CellPosition == finalDest){
-
-				 ACTUATOR_LED(-1, -1, 200);
-				 HAL_Delay(1000);
-				 ACTUATOR_LED(-1, -1, 0);
-				 break;
-			 }
-		}
 
 }

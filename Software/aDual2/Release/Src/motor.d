@@ -34,7 +34,7 @@ Src/motor.o: ../Src/motor.c ../Inc/motor.h ../Inc/main.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
  ../Inc/actuator.h ../Inc/tim.h ../Inc/sensors.h ../Inc/BNO055.h \
- ../Inc/adc.h ../Inc/i2c.h
+ ../Inc/adc.h ../Inc/i2c.h ../Inc/usart.h
 
 ../Inc/motor.h:
 
@@ -119,3 +119,5 @@ Src/motor.o: ../Src/motor.c ../Inc/motor.h ../Inc/main.h \
 ../Inc/adc.h:
 
 ../Inc/i2c.h:
+
+../Inc/usart.h:

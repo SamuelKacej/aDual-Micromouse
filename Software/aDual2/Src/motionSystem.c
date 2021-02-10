@@ -19,7 +19,7 @@ void MOTION_Init(float tP,float tI,float tD,float aP,float aI,float aD){
 	 INSTR_VelocityPeak	 	= 1500;	// mm/s , < 1000 ; 3500 > Translational
 	 INSTR_AverageVelocity 	= 500; 	// mm/s , <  250 ; 1500 > Translational
 
-	 INSTR_MaxTransAccel 	= 9100;	// mm/s    1 g =~ 9807mm/s
+	 INSTR_MaxTransAccel 	= 5000;	// mm/s    1 g =~ 9807mm/s
 
 	 INSTR_MaxAngVelocity 	= 2*PI;	// rad/s
 
@@ -27,6 +27,7 @@ void MOTION_Init(float tP,float tI,float tD,float aP,float aI,float aD){
 
 	 MOTION_instrID = INSTR_LIST_SIZE -1;
 	 MOTION_ExternalAngCorrection = 0;
+	 MOTION_ExternalTransCorrection = 0;
 	 insList = INSTR_InstrList;
 
 	 MOTION_RequestNewInstruction = 0;
@@ -125,12 +126,21 @@ void MOTION_ProcessedInstraction(INSTR_INSTRUCTION* instrActual){ // updated
 
 
 	// calc Velocity
-	float newVelA, newVelT;
+
+	//float newVelT = SENSORS_transVel;
+	//float newVelA = SENSORS_angleVel;
+	float newVelT, newVelA;
 	MOTION_StepVelocity(instrActual, &newVelT, &newVelA);
 
+	//printf("%.1f, %.1f, %.1f, \r\n",instrActual->speed, SENSORS_transVel, newVelT);
+
+
+
+
 	// set volocity
-	MOTION_SetVelocity(newVelT, newVelA + MOTION_ExternalAngCorrection);
+	MOTION_SetVelocity(newVelT + MOTION_ExternalTransCorrection, newVelA + MOTION_ExternalAngCorrection);
 	MOTION_ExternalAngCorrection = 0; // reset correction
+	MOTION_ExternalTransCorrection = 0; // reset correction
 
 
 }
@@ -208,29 +218,53 @@ void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float* angul
 	} else if (instr->accel !=0){
 
 
+		*angularVel = 0; // rotation is not allowed
+
 		instr->continuance = 100*(SENSORS_transPos - instr->distBegin)/ instr->dist;
 
+		static float slowDownCNT = 0;
 		//speed up
 
-		// time instance is used as counter.
+		if(instr->continuance <= instr->slowDownCont){
+			// time instance is used as counter.
+			// TODO time sa musi vynulovat?
+			instr->time +=  MOTION_uTimePeriod*(1e-6);
+			*transVel = instr->accel * instr->time;// vzdy to pojde od 0-to je trocha zle
 
-		// TODO time sa musi vynulovat?
-		instr->time +=  MOTION_uTimePeriod*(1e-6);
-		*transVel = instr->accel * instr->time;
+			// overshoot protection
+			if(instr->accel > 0 && *transVel > instr->speed)
+				*transVel = instr->speed;
+			if(instr->accel < 0 && *transVel < instr->speed)
+				*transVel = instr->speed;
+			slowDownCNT = 0;
+		}else{// slow down if requested
+			slowDownCNT +=  MOTION_uTimePeriod*(1e-6);
+			*transVel =  instr->speed - instr->accel * slowDownCNT;
 
-		// overshoot protection
-		if(instr->accel > 0 && *transVel > instr->speed)
-			*transVel = instr->speed;
-		if(instr->accel < 0 && *transVel < instr->speed)
-			*transVel = instr->speed;
+			// overshoot protection
+			if(instr->accel > 0 && *transVel < 20) // you are using -accel
+				*transVel = 20;
+			if(instr->accel < 0 && *transVel > -20)
+				*transVel = -20;
 
-		*angularVel = 0; // rotation is not allowed
+			}
+
 
 	}else{
 		// const speed
 		*angularVel = 0;
-		*transVel = instr->speed;
-		 instr->continuance = 100*(SENSORS_transPos - instr->distBegin)/ instr->dist;
+
+		// speed up if actual velocity and target are different
+		// todo proper acceleration with instr->time
+		if(SENSORS_transVel < ((instr->speed)-200)){
+			*transVel = SENSORS_transVel + 120;
+		}else if(SENSORS_transVel > ((instr->speed)+200)){
+			*transVel = SENSORS_transVel - 120;
+		}else{
+			*transVel = instr->speed;
+		}
+
+		instr->continuance = 100*(SENSORS_transPos - instr->distBegin)/ instr->dist;
 	}
 
 

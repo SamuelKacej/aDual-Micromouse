@@ -36,6 +36,7 @@ PID_CONTROLLER MOTION_angularController;
 PID_CONTROLLER MOTION_translationController;
 
 float MOTION_ExternalAngCorrection;		// external correction,(for wall correction)
+float MOTION_ExternalTransCorrection;
 uint8_t MOTION_RequestNewInstruction; 	// external request
 INSTR_INSTRUCTION* insList;
 

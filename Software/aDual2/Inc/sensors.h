@@ -28,6 +28,8 @@
 #include "i2c.h"
 #include "tim.h"
 #include "math.h"
+#include "stdio.h"
+#include "usart.h"
 
 #define SENSORS_HI2C	hi2c1
 #define SENSORS_ADDRESS 0x28
@@ -44,8 +46,11 @@
 //BNO055 can measure with frequency max 100Hz (10ms)
 #define SENSORS_IMU_uTIMEOUT 11000 //us 11ms
 
-#define SENSOR_FILTER_LENGTH 10
-//TODO: define sensors_adcd
+// MA filter for position
+#define SENSOR_FILTER_LENGTH 5
+
+// simple kalman filter for velocity
+#define VELOCITY_FILTER_COEFICIENT 4
 
 float SENSORS_transPos; //mm
 float SENSORS_transVel;

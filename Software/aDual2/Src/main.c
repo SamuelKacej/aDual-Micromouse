@@ -38,6 +38,7 @@
 #include "motionSystem.h"
 #include "BNO055.h"
 #include "mouse.h"
+#include "mapping.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -200,8 +201,8 @@ int main(void)
   while (1)
   {
 
-	  if(SENSORS_batteryV[0] < 7300){
-	  	  		  //3.65V per cell
+	  if(SENSORS_batteryV[0] < 7200){
+	  	  		  //3.6V per cell
 
 	  	  while(1){
 
@@ -219,10 +220,20 @@ int main(void)
 	  	  }
 	    	  }
 
-	  //vTest = MOUSE_LookForWalls();
+/*
+	  while(1){
+		  for(int i = 0; i< 50 ; i++){
+			  MAPPING_LookForWalls(0b111);
+		  }
+		  MAPPING_LookForWalls(0);
 
+	  }
+*/
+	  ACTUATOR_LED(0, 0, 150);
 	  HAL_Delay(1500);
-	  MOUSE_SearchRun(300.0);
+	  ACTUATOR_LED(0, 0, 0);
+	  HAL_Delay(100);
+	  MOUSE_SearchRun(400.0);
 
 
 
@@ -332,11 +343,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	  MOTION_Update();
 /*
 	  char x[64];
-	  uint8_t len = sprintf(x,"%i, %.3f, %.3f, %.3f, %.3f \n\r",(int)(MAIN_GetMicros()/1000),
-			  MOTOR_currentController[1].U,
-			  MOTOR_velocityController[1].U*1000,
-			  MOTOR_velocityController[1].FB,
-			  MOTOR_velocityController[1].W);
+	  uint8_t len = sprintf(x,"%.3f, %.3f, %.3f, %.3f \n\r",
+			  MOTOR_currentController[1].U,			// PWM
+			  MOTOR_currentController[1].FB*1000,  // mA
+			  MOTOR_velocityController[1].FB,		// Measured Velocity
+			  MOTOR_velocityController[1].W);		// req Velocity
 
 	  HAL_UART_Transmit(&huart3, (uint8_t*)x, len, 1000);
 */

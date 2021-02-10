@@ -42,10 +42,11 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
  ../Middlewares/Third_Party/FatFs/src/ff.h ../Inc/sd_diskio.h \
  ../Inc/i2c.h ../Inc/sdio.h ../Inc/tim.h ../Inc/usart.h ../Inc/gpio.h \
  ../Inc/sensors.h ../Inc/BNO055.h ../Inc/adc.h ../Inc/i2c.h ../Inc/tim.h \
- ../Inc/maze.h ../Inc/actuator.h ../Inc/motor.h ../Inc/actuator.h \
- ../Inc/sensors.h ../Inc/motionSystem.h ../Inc/instructions.h \
- ../Inc/command.h ../Inc/maze.h ../Inc/motor.h ../Inc/BNO055.h \
- ../Inc/mouse.h ../Inc/motionSystem.h
+ ../Inc/usart.h ../Inc/maze.h ../Inc/actuator.h ../Inc/motor.h \
+ ../Inc/actuator.h ../Inc/sensors.h ../Inc/motionSystem.h \
+ ../Inc/instructions.h ../Inc/command.h ../Inc/maze.h ../Inc/motor.h \
+ ../Inc/BNO055.h ../Inc/mouse.h ../Inc/motionSystem.h ../Inc/mapping.h \
+ ../Inc/correction.h ../Inc/mouse.h
 
 ../Inc/main.h:
 
@@ -163,6 +164,8 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
 
 ../Inc/tim.h:
 
+../Inc/usart.h:
+
 ../Inc/maze.h:
 
 ../Inc/actuator.h:
@@ -188,3 +191,9 @@ Src/main.o: ../Src/main.c ../Inc/main.h \
 ../Inc/mouse.h:
 
 ../Inc/motionSystem.h:
+
+../Inc/mapping.h:
+
+../Inc/correction.h:
+
+../Inc/mouse.h:
