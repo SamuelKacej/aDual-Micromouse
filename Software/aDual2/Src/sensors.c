@@ -171,6 +171,7 @@ void SENSORS_vectorsCalc(){
 	SENSORS_angleAccel 	= newAngleAccel;
 	SENSORS_angleJerk 	= newAngleJerk;
 
+
 	/*
 	uint8_t s[30];//7*3+3
 	const uint8_t len =  sprintf((char*)s,"%.1f\t %.2f\t %.2f\t \r\n", distL0, SENSORS_xAngularVelocity, dTime/1000 );

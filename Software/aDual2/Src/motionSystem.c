@@ -41,6 +41,10 @@ void MOTION_Init(float tP,float tI,float tD,float aP,float aI,float aD){
 	MOTION_translationController.minU = -6000;
 	MOTION_translationController.b = 1;
 	MOTION_translationController.c = 1;
+	MOTION_translationController.feedfwd_0order_K = 1;
+	MOTION_translationController.feedfwd_1order_T = 0;
+	MOTION_translationController.feedfwd_1order_K = 0;
+
 
 	MOTOR_ControllerSet(&MOTION_angularController, aP, aI, aD);
 	MOTION_angularController.Tx = 0;
@@ -48,6 +52,10 @@ void MOTION_Init(float tP,float tI,float tD,float aP,float aI,float aD){
 	MOTION_angularController.minU = -80;
 	MOTION_angularController.b = 1;
 	MOTION_angularController.c = 1;
+	MOTION_angularController.feedfwd_0order_K = 1;
+	MOTION_angularController.feedfwd_1order_T = 0.0;
+	MOTION_angularController.feedfwd_1order_K = 0;
+
 
 
 
@@ -132,7 +140,6 @@ void MOTION_ProcessedInstraction(INSTR_INSTRUCTION* instrActual){ // updated
 	float newVelT, newVelA;
 	MOTION_StepVelocity(instrActual, &newVelT, &newVelA);
 
-	printf("%.1f, %.1f\r\n", SENSORS_transVel, newVelT);
 
 
 	// set volocity
@@ -192,8 +199,7 @@ void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float* angul
 
 			instr->continuance = (angleContinuance)*100;
 			//if u stop you will have allways continuance 0 (you can't start)
-			// I think only this bridge of IF does need this initial step
-			const float tmpContinuanceAngle1 = (tmpContinuanceAngle<0.02)? 0.02: angleContinuance;
+			const float tmpContinuanceAngle1 = (tmpContinuanceAngle<0.02)? 0.05: angleContinuance;
 
 			// In-place turn
 			*transVel = 0;
@@ -415,25 +421,37 @@ void MOTION_SetVelocity(float transV, float angularV){
 
 	// PID update
 
-	// TODO: adaptive pid regulator
+	const float absAngluarSpeed = (angularV >= 0)? angularV : -angularV;
+		if(absAngluarSpeed < 0.1){
+			MOTION_angularController.P = 0.1;
+			MOTION_angularController.I = 0;
+			MOTION_angularController.D = 0;
+			MOTION_angularController.feedfwd_0order_K = 1;
+			MOTION_angularController.E_Sum = 0;
 
-	// TODO feedforward !!!! Medium priority
+		}else if(absAngluarSpeed < 2){
+			MOTION_angularController.P = 0.3;
+			MOTION_angularController.I = 1;
+			MOTION_angularController.D = 0;
+			MOTION_angularController.feedfwd_0order_K = 1.2;
+		}else{
+			MOTION_angularController.P = 0.2;
+			MOTION_angularController.I = 0;
+			MOTION_angularController.D = 0;
+			MOTION_angularController.feedfwd_0order_K = 1;
+			MOTION_angularController.E_Sum = 0;
+		}
 
 
-	/* TODO VYLADIT REGULATOR sorry nestiham do odovzdania vyladit tento regulator
-	MOTOR_ControllerUpdate(&MOTION_angularController, angularV, SENSORS_angleVel);
-	MOTOR_ControllerUpdate(&MOTION_translationController, transV, SENSORS_transVel);
+
+	MOTOR_ControllerUpdate(&MOTION_angularController, angularV, SENSORS_angleVel, MAIN_GetMicros());
+	MOTOR_ControllerUpdate(&MOTION_translationController, transV, SENSORS_transVel, MAIN_GetMicros());
+
+	printf("%f, %f, %f, %f \r\n", 100*MOTION_angularController.FB, 100*angularV, 100*MOTION_angularController.U, transV);
 
 	float velL_req = MOTION_translationController.U - MOTION_angularController.U*WHEEL_PITCH/2;
 	float velR_req = MOTION_translationController.U + MOTION_angularController.U*WHEEL_PITCH/2;
 
-	if(transV == 0 && angularV==0)
-		 velL_req = velR_req = 0;
-	*/
-	float velL_req = transV - angularV*WHEEL_PITCH/2;
-	float velR_req = transV + angularV*WHEEL_PITCH/2;
-
-	//printf("%i\t, %i\t, %.2f\t, %.2f \r\n", (int)velL_req, (int)velR_req, transV, angularV);
 
 	MOTOR_SetVelocity(MOTOR_ML, velL_req);
 	MOTOR_SetVelocity(MOTOR_MR, velR_req);

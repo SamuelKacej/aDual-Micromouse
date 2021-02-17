@@ -58,8 +58,10 @@ typedef struct {
 	float maxU, minU;
 
 	// feed forward
-	float feedfwd_0order; // multiply by W
-	float feedfwd_1order; // multiply by derivation of W
+	float feedfwd_0order_K; // multiply by W
+	float feedfwd_1order_K; // multiply by derivation of W
+	float feedfwd_1order_T; // Ks/(Ts+1)
+	float feedfwd_1order_Integrator;
 
 
 	// dt micro seconds

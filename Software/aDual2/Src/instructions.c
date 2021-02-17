@@ -64,7 +64,7 @@ void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius,
 	 *
 	 */
 
-	radius *= 1.3;// nie je to KRUH, ale OVAL
+	//radius *= 1.3;//1.3 nie je to KRUH, ale OVAL
 
 	float angleRad = angleDeg*PI/180;
 	const float absAngleRad = (angleRad>=0)?angleRad:-angleRad;
@@ -84,7 +84,7 @@ void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius,
 												 // it will take same time as SS90deg turn
 		transVelocity = 0;						 // no radius => no arc :)
 
-		//angleRad *= 1.2; // compenstaion for 4 wheel
+
 	}
 
 

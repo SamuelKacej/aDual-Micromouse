@@ -23,6 +23,7 @@ void MOTOR_ControllerReset(PID_CONTROLLER* pid){
 	pid->b = 1;
 	pid->c = 1;
 	pid->uPrevTime = MAIN_GetMicros();
+	pid->feedfwd_1order_Integrator = 0;
 
 
 
@@ -56,6 +57,7 @@ void MOTOR_INIT(){
 
 void MOTOR_ControllerSet( PID_CONTROLLER* pid,\
 			float P, float I, float D){
+	MOTOR_ControllerReset(pid);
 	pid->P = P;
 	pid->I = I;
 	pid->D = D;
@@ -71,13 +73,15 @@ volatile float MOTOR_ControllerUpdate( PID_CONTROLLER* pid, float requiredValue,
 	pid->uPrevTime = uTime;
 
 	//feedforward
-	pid->U  = pid->feedfwd_0order * requiredValue;
-	pid->U += pid->feedfwd_1order * (requiredValue-pid->W)/dt;
+	pid->U = pid->feedfwd_1order_K * (requiredValue - pid->feedfwd_1order_Integrator);
+	pid->feedfwd_1order_Integrator = pid->feedfwd_1order_T * (pid->U)*dt; // U/W = K/(T*s+1)
+	pid->U += pid->feedfwd_0order_K * requiredValue;
+
 
 	//inputs
 	pid->W	= requiredValue;
-	pid->FB 	= feedback;
-	pid->E = requiredValue - feedback;
+	pid->FB = feedback;
+	pid->E  = requiredValue - feedback;
 
 
 	// pid coeficients
@@ -180,9 +184,11 @@ void MOTOR_SetMoment(uint8_t motorSelect, float requiredMoment ){
 
 
 
-	const float tmpU = MOTOR_ControllerUpdate(&MOTOR_currentController[motorSelect], requiredCurrent,\
+	float tmpU = MOTOR_ControllerUpdate(&MOTOR_currentController[motorSelect], requiredCurrent,\
 			measuredCurrent/1000.0, MAIN_GetMicros());	// mA->A
 
+	//tmpU = (abs(tmpU)>0.001)? tmpU : 0;
+	tmpU = (((tmpU>0)?tmpU:-tmpU)>0.001)? tmpU : 0;
 	MOTOR_SetVoltage(motorSelect, tmpU);
 
 

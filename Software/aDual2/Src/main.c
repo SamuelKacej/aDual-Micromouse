@@ -55,41 +55,40 @@ uint8_t vTest;
 /* USER CODE BEGIN PM */
 void MAIN_SetPIDs(){
 
-// current
- MOTOR_ControllerSet( &MOTOR_currentController[0], 0.035, 0.62, 0);
-  MOTOR_currentController[0].b = 0.8;	// source of P error variable
-  MOTOR_currentController[0].c = 1;
-  MOTOR_currentController[0].feedfwd_0order_K = 0;
-  MOTOR_currentController[0].feedfwd_1order_K = 0;
-  MOTOR_currentController[0].feedfwd_1order_T = 0;
+	MOTOR_ControllerSet( &MOTOR_currentController[0], 0.1, 15, 0);
+	MOTOR_currentController[0].b = 1;	// source of P error variable
+	MOTOR_currentController[0].c = 1;
+	MOTOR_currentController[0].feedfwd_0order_K = 0.01;
+	MOTOR_currentController[0].feedfwd_1order_K = 0;
+	MOTOR_currentController[0].feedfwd_1order_T = 0;
 
- MOTOR_ControllerSet( &MOTOR_currentController[1], 0.035, 0.62, 0);
-  MOTOR_currentController[1].b = 0.8;	// source of P error variable
-  MOTOR_currentController[1].c = 1;
-  MOTOR_currentController[1].feedfwd_0order_K = 0;
-  MOTOR_currentController[1].feedfwd_1order_K = 0;
-  MOTOR_currentController[1].feedfwd_1order_T = 0;
-
-
-  // velocity
-  MOTOR_ControllerSet( &MOTOR_velocityController[1], 3e-5, 1.2e-4, 0);
-  MOTOR_velocityController[1].b = 1;
-  MOTOR_velocityController[1].c = 1;
-  MOTOR_velocityController[1].feedfwd_0order_K = 0*2e-7;
-  MOTOR_velocityController[1].feedfwd_1order_K = 0*4e-8;
-  MOTOR_velocityController[1].feedfwd_1order_T = 0;
+	MOTOR_ControllerSet( &MOTOR_currentController[1], 0.1, 15, 0);
+	MOTOR_currentController[1].b = 1;	// source of P error variable
+	MOTOR_currentController[1].c = 1;
+	MOTOR_currentController[1].feedfwd_0order_K = 0.01;
+	MOTOR_currentController[1].feedfwd_1order_K = 0;
+	MOTOR_currentController[1].feedfwd_1order_T = 0;
 
 
-   MOTOR_ControllerSet( &MOTOR_velocityController[0], 3e-5, 1.2e-4, 0);
-   MOTOR_velocityController[0].b = 1;
-   MOTOR_velocityController[0].c = 1;
-   MOTOR_velocityController[0].feedfwd_0order_K = 0*2e-7;
-   MOTOR_velocityController[0].feedfwd_1order_K = 0*4e-8;
-   MOTOR_velocityController[0].feedfwd_1order_T = 0*0.02;
+	// velocity
+	MOTOR_ControllerSet( &MOTOR_velocityController[1], 3e-7, 2e-6, 0);
+	MOTOR_velocityController[1].b = 1;
+	MOTOR_velocityController[1].c = 1;
+	MOTOR_velocityController[1].feedfwd_0order_K = 2e-7;
+	MOTOR_velocityController[1].feedfwd_1order_K = 4e-8;
+	MOTOR_velocityController[1].feedfwd_1order_T = 0.02;
+
+
+	MOTOR_ControllerSet( &MOTOR_velocityController[0], 3e-7, 2e-6, 0);
+	MOTOR_velocityController[0].b = 1;
+	MOTOR_velocityController[0].c = 1;
+	MOTOR_velocityController[0].feedfwd_0order_K = 2e-7;
+	MOTOR_velocityController[0].feedfwd_1order_K = 4e-8;
+	MOTOR_velocityController[0].feedfwd_1order_T = 0.02;
 
 
 // vector velocity
-  MOTION_Init(0.8, 0.05, 0, 0.8, 0.1, 0);
+  MOTION_Init(1, 0, 0,  0, 1, 0);
 
 }
 /* USER CODE END PM */
@@ -193,7 +192,7 @@ int main(void)
 
   // INIT PERIODIC TIMMERS
 
-  HAL_Delay(2e3);
+  HAL_Delay(1500);
 
   MOTOR_INIT();
   MAIN_SetPIDs();
@@ -220,7 +219,7 @@ int main(void)
   while (1)
   {
 
-	  HAL_Delay(2e3);
+	  HAL_Delay(1e3);
 
 	  if(SENSORS_batteryV[0] < 7200){
 	  	  		  //3.6V per cell
@@ -254,11 +253,11 @@ int main(void)
 	  ACTUATOR_LED(0, 0, 0);
 	  HAL_Delay(100);
 
-	  MOUSE_SearchRun(400.0, 0x00, 0x21);
+	  MOUSE_SearchRun(400.0/1.3, 0x00, 0x21);
 	  //MAPPING_PrintMaze(MOUSE_CellPosition);
 	  HAL_Delay(500);
 
-	  MOUSE_SearchRun(400.0, MOUSE_CellPosition, 0x00);
+	  MOUSE_SearchRun(600.0, MOUSE_CellPosition, 0x00);
 	  //MAPPING_PrintMaze(MOUSE_CellPosition);
 	  HAL_Delay(500);
 
@@ -344,26 +343,29 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
             the HAL_TIM_PeriodElapsedCallback could be implemented in the user file
    */
 
-  static float volt = 1000;
+  //static float speed = 0;
 
   if(htim->Instance == htim12.Instance){
 
 	  //TODO  battery chcek
 	  //	  volatile int sTime = MAIN_GetMicros();
-
 /*
-	  if(MAIN_GetMicros()>1.4e6)  volt = 0;
+	  if(MAIN_GetMicros()>3e6)  speed = 4;
+	  if(MAIN_GetMicros()>5e6)  HAL_TIM_Base_Stop_IT(&htim12);
 
-	  if(MAIN_GetMicros()>2e6)    HAL_TIM_Base_Stop_IT(&htim12);
 
-	  MOTOR_SetVelocity(0, volt );
-	  MOTOR_SetVelocity(1, volt );
+
+	  MOTION_SetVelocity(0, speed);
+	  speed += 0.005;
 */
+
+
 	  MOTION_Update();
 	  SENSORS_Update(); // 140 us
+	//  printf("%.3f, %.3f\r\n", SENSORS_angleVel, speed);
 
 
-	  //printf("%f, %f, %f\r\n", 100000*MOTOR_velocityController[0].U, MOTOR_velocityController[0].FB, 1000*MOTOR_currentController[0].FB );
+	//  printf("%f, %f, %f\r\n", 100000*MOTOR_velocityController[0].U, MOTOR_velocityController[0].FB, 1000*MOTOR_currentController[0].FB );
 
 
 

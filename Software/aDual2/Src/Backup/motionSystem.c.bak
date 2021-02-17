@@ -41,6 +41,10 @@ void MOTION_Init(float tP,float tI,float tD,float aP,float aI,float aD){
 	MOTION_translationController.minU = -6000;
 	MOTION_translationController.b = 1;
 	MOTION_translationController.c = 1;
+	MOTION_translationController.feedfwd_0order_K = 1;
+	MOTION_translationController.feedfwd_1order_T = 0;
+	MOTION_translationController.feedfwd_1order_K = 0;
+
 
 	MOTOR_ControllerSet(&MOTION_angularController, aP, aI, aD);
 	MOTION_angularController.Tx = 0;
@@ -48,6 +52,10 @@ void MOTION_Init(float tP,float tI,float tD,float aP,float aI,float aD){
 	MOTION_angularController.minU = -80;
 	MOTION_angularController.b = 1;
 	MOTION_angularController.c = 1;
+	MOTION_angularController.feedfwd_0order_K = 1;
+	MOTION_angularController.feedfwd_1order_T = 0;
+	MOTION_angularController.feedfwd_1order_K = 0;
+
 
 
 
@@ -132,7 +140,7 @@ void MOTION_ProcessedInstraction(INSTR_INSTRUCTION* instrActual){ // updated
 	float newVelT, newVelA;
 	MOTION_StepVelocity(instrActual, &newVelT, &newVelA);
 
-	printf("%.1f, %.1f\r\n", SENSORS_transVel, newVelT);
+	//printf("%.1f, %.1f\r\n", SENSORS_angleVel, newVelA);
 
 
 	// set volocity
@@ -415,26 +423,20 @@ void MOTION_SetVelocity(float transV, float angularV){
 
 	// PID update
 
-	// TODO: adaptive pid regulator
-
-	// TODO feedforward !!!! Medium priority
-
-
-	/* TODO VYLADIT REGULATOR sorry nestiham do odovzdania vyladit tento regulator
-	MOTOR_ControllerUpdate(&MOTION_angularController, angularV, SENSORS_angleVel);
-	MOTOR_ControllerUpdate(&MOTION_translationController, transV, SENSORS_transVel);
+	MOTOR_ControllerUpdate(&MOTION_angularController, angularV, SENSORS_angleVel, MAIN_GetMicros());
+	MOTOR_ControllerUpdate(&MOTION_translationController, transV, SENSORS_transVel, MAIN_GetMicros());
 
 	float velL_req = MOTION_translationController.U - MOTION_angularController.U*WHEEL_PITCH/2;
 	float velR_req = MOTION_translationController.U + MOTION_angularController.U*WHEEL_PITCH/2;
-
+/*
 	if(transV == 0 && angularV==0)
 		 velL_req = velR_req = 0;
-	*/
+
 	float velL_req = transV - angularV*WHEEL_PITCH/2;
 	float velR_req = transV + angularV*WHEEL_PITCH/2;
 
 	//printf("%i\t, %i\t, %.2f\t, %.2f \r\n", (int)velL_req, (int)velR_req, transV, angularV);
-
+*/
 	MOTOR_SetVelocity(MOTOR_ML, velL_req);
 	MOTOR_SetVelocity(MOTOR_MR, velR_req);
 

@@ -8,6 +8,7 @@
 
 #include "motor.h"
 
+#define abs(a) ((a)>=0)?a:-a
 
 void MOTOR_ControllerReset(PID_CONTROLLER* pid){
 
@@ -57,6 +58,7 @@ void MOTOR_INIT(){
 
 void MOTOR_ControllerSet( PID_CONTROLLER* pid,\
 			float P, float I, float D){
+	MOTOR_ControllerReset(pid);
 	pid->P = P;
 	pid->I = I;
 	pid->D = D;
@@ -187,6 +189,7 @@ void MOTOR_SetMoment(uint8_t motorSelect, float requiredMoment ){
 			measuredCurrent/1000.0, MAIN_GetMicros());	// mA->A
 
 	tmpU = (abs(tmpU)>0.001)? tmpU : 0;
+	//tmpU = (((tmpU>0)?tmpU:-tmpU)>0.001)? tmpU : 0;
 	MOTOR_SetVoltage(motorSelect, tmpU);
 
 
@@ -194,28 +197,17 @@ void MOTOR_SetMoment(uint8_t motorSelect, float requiredMoment ){
 
 void MOTOR_SetVelocity(uint8_t motorSelect, float requiredVelocity){
 
-	// TODO ADAPTIVE Controller
-
 	MOTOR_ControllerUpdate(&MOTOR_velocityController[motorSelect], \
 			requiredVelocity, SENSORS_velocity[motorSelect], \
 			MAIN_GetMicros());
 
-	/*
-	if(requiredVelocity == 0 ){
-		MOTOR_velocityController[motorSelect].U = 0;
+
+	// reset time integrator if robot is in stop
+	if((abs(requiredVelocity) <= 1) && (abs(SENSORS_velocity[motorSelect]) < 10) ){
+		MOTOR_velocityController[motorSelect].E_Sum = 0;
 	}
-	*/
 
 	MOTOR_SetMoment(motorSelect, MOTOR_velocityController[motorSelect].U);
-
-	//TOTO TU PADA ten printf
-	/*if(motorSelect = 1)
-	printf(" %i,\t %.2f, \t %.2f, \t %.2f, \t %.2f, \t %.2f\n\r",\
-				MAIN_GetMicros()/1000, requiredVelocity,  MOTOR_velocityController[0].FB,\
-				 MOTOR_velocityController[0].U*1000, MOTOR_currentController[0].FB*1000,\
-				 MOTOR_currentController[0].U);
-*/
-	//MOTOR_SetVoltage(motorSelect, MOTOR_velocityController[motorSelect].U);
 
 }
 
