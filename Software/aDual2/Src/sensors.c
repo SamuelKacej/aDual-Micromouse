@@ -120,6 +120,7 @@ void SENSORS_EncoderUpdateValues(){
 
 	}
 }
+
 void SENSORS_vectorsCalc(){
 
 	// get time
@@ -219,6 +220,7 @@ void SENSORS_AdcUpdateValues(){
 
 	while ((MAIN_GetMicros() - clk_start) < uHalfPeriodOfLight);
 
+	//--------------------------------------
 
 	adcReadComplete = 0;
 	// wait until reads ends
@@ -226,6 +228,9 @@ void SENSORS_AdcUpdateValues(){
 	// read adc ir sens
 	SENSORS_irRead((uint16_t*) &irAdcToogleVal[1][0]);													// # reading 10
 
+	// current
+	SENSORS_iSenseVal[0] += valAdc1[2];
+	SENSORS_iSenseVal[1] += valAdc1[3];
 
 	// get system clock
 	clk_start = MAIN_GetMicros();
@@ -234,7 +239,7 @@ void SENSORS_AdcUpdateValues(){
 	HAL_GPIO_WritePin(GPIO_IR_LED2_GPIO_Port, GPIO_IR_LED2_Pin,  GPIO_PIN_SET);		//wait 20us to rise
 	// wait 20us
 	while ((MAIN_GetMicros() - clk_start) < uHalfPeriodOfLight);
-
+	//--------------------------------------
 
 	adcReadComplete = 0;
 	// wait until reads ends
@@ -243,6 +248,10 @@ void SENSORS_AdcUpdateValues(){
 	SENSORS_irRead((uint16_t*) &(irAdcToogleVal[2][0]));													// # reading 01
 
 	HAL_GPIO_WritePin(GPIO_IR_LED2_GPIO_Port, GPIO_IR_LED2_Pin,  GPIO_PIN_RESET);
+
+	// current
+	SENSORS_iSenseVal[0] += valAdc1[2];
+	SENSORS_iSenseVal[1] += valAdc1[3];
 
 	//END of ADC reading
 
@@ -258,7 +267,7 @@ void SENSORS_AdcUpdateValues(){
 
 	// baterry voltage and motor curent  calculation
 	for(uint8_t i = 0 ; i < 2 ; i++){
-		SENSOR_FilterAdd(SENSORS_iSenseVal[i], &currentFilter[i]);
+		SENSOR_FilterAdd(SENSORS_iSenseVal[i]/3, &currentFilter[i]);
 		const uint16_t avgCurrent =SENSOR_FilterGet(&currentFilter[i]);
 
 		SENSORS_motorI[i]   = avgCurrent * SENSORS_CONST_B_TO_U * 1000 * SENSORS_CONST_MOTOR_I;

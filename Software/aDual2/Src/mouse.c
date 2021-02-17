@@ -25,7 +25,7 @@ void MOUSE_printSensDist(){
 
 	HAL_UART_Transmit(&huart3, (uint8_t*) s , len, 10);
 }
-uint8_t MOUSE_SearchRun( float avgVel ){
+uint8_t MOUSE_SearchRun( float avgVel, uint8_t startDest, const uint8_t finalDest ){
 	/*
 	 * return 0 = robot is at the begin
 	 * return x = robot is cant find way;
@@ -42,43 +42,45 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 	 */
 
 
-	const uint8_t finalDest = 0x21;
-
-	MOUSE_CellPosition = 0;
-	MOUSE_CellOrientation = ROT_NORTH;
+	MOUSE_CellPosition = startDest;
+	INSTR_AverageVelocity = avgVel;
 
 
+
+	// detect around walls at the start
 	CMD_WALLS_RELATIVE detectedWalls ;
 	for(uint8_t i = 0; i<35; i++){
 		detectedWalls.wall =  MAPPING_LookForWalls(0b111);
 	 }
 	detectedWalls.wall = MAPPING_LookForWalls(0b000);
 	MAPPING_WriteWalls(detectedWalls, MOUSE_CellPosition, MOUSE_CellOrientation);
-	//MOUSE_PrintMaze();
+
+	if(startDest == 0x00)
+		CORR_PrepareToStart();
 
 	while(1){
 
-		 INSTR_CommandListIndex = 0;
-		 //MOUSE_PrintMaze();
+		 INSTR_CommandListIndex = 0; // TODO in future list wil be not reseted
 		 HAL_Delay(50);
 
-		 MAZE_updatePath(MOUSE_CellPosition, finalDest); // 77, 78, 87, 88 are finsh cells
+		 // search in map path to finish
+		 MAZE_updatePath(MOUSE_CellPosition, finalDest);
 		 MAZE_updatePath(MOUSE_CellPosition, MAZE_path[1].cell->address); // move just one cell
 		 CMD_AbsolutePathToRelative( (MAZE_DIRECTIONS*) MAZE_path, CMD_directionList, MOUSE_CellOrientation);
 		 CMD_PathToCommand(CMD_directionList, CMD_commandList, (MAZE_DIRECTIONS*) MAZE_path);
 
-		 INSTR_AverageVelocity = avgVel;
 
+		 // list with instructions will be updated
+		 // from now robot starts moving
 		 MOTION_UpdateList();
 		 MOTION_instrID = 0;
-		 detectedWalls.wall = 0;
 
+		 detectedWalls.wall = 0;
 		 do{
 
 			 //TODO : crash detection
 
 			 // writing walls
-
 			 if(MAPPING_isTimeToReadSideWall()){
 				 detectedWalls.wall |= 0b1010 & MAPPING_LookForWalls(0b100);
 			 }
@@ -86,6 +88,7 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 				 detectedWalls.wall |= 0b0100 & MAPPING_LookForWalls(0b001);
 			 }
 
+			 // correct position to be parallel to the side walls
 			 if(CORR_isPositionForSideCorrection()){
 				 ACTUATOR_LED(0, 30, -1);
 				 CORR_ParallelToSide();
@@ -93,20 +96,19 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 				 ACTUATOR_LED(0, 0, -1);
 			 }
 
+
 			 HAL_Delay(1);
-			 //printf(" %u %u %u\r\n", detectedWalls.WALL.left, detectedWalls.WALL.front, detectedWalls.WALL.right);
 
 			 //caka kym sa vykona potrebny pocet komandov teda kym neprijde posledny stop
 			 //Pozor nie 1 instrukcia ale vsetky instrukcie daneho cmd
 			MOUSE_ChcekForNewComand();
 		 }while(INSTR_InstrListUsedInstr!=MOTION_instrID );
 
-
+		 // read walls from logger, and reset logger
 		 detectedWalls.wall = MAPPING_LookForWalls(0b000);
-		// mozno bude treba pridat positon
 		 MAPPING_WriteWalls(detectedWalls, MOUSE_CellPosition, MOUSE_CellOrientation);
 
-		 // front wall corection at place if there is wall;
+		 // if there is front wall correct to it
 		 if(detectedWalls.wall & 0b0100 ){
 			 ACTUATOR_LED(150, -1, -1);
 			 CORR_PerpendicularToForward();
@@ -114,14 +116,11 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 		 }
 
 		 //MAPPING_PrintMaze(MOUSE_CellPosition);
-		 //finish // x77
-		 if(     MOUSE_CellPosition == finalDest ||\
-				 MOUSE_CellPosition == 0x78 ||\
-				 MOUSE_CellPosition == 0x87 ||\
-				 MOUSE_CellPosition == 0x88 ){
+
+		 if( MOUSE_CellPosition == finalDest ){
 
 			 ACTUATOR_LED(-1, -1, 200);
-			 HAL_Delay(2000);
+			 HAL_Delay(1000);
 			 ACTUATOR_LED(-1, -1, 0);
 			 break;
 		 }
@@ -133,35 +132,38 @@ uint8_t MOUSE_SearchRun( float avgVel ){
 
 }
 
-uint8_t MOUSE_SpeedRun( float avgVel ){
+uint8_t MOUSE_SpeedRun( float avgVel, uint8_t startCell, uint8_t finalCell ){
 	/*
 	 * Robot must be at the begin of the maze
-	 * avgVel is average ttranslation velocity of the robot (~500mm/s)
+	 * avgVel is average translation velocity of the robot (~500mm/s)
 	 */
 
-	 MAZE_updatePath(0x00, 0x88); // 77, 78, 87, 88 are finsh cells
+
+	 CORR_PrepareToStart();
+
+	 MAZE_updatePath(startCell, finalCell); // 77, 78, 87, 88 are finsh cells
 	 CMD_AbsolutePathToRelative((MAZE_DIRECTIONS*)MAZE_path, CMD_directionList, MOUSE_CellOrientation);
+	 INSTR_CommandListIndex = 0;
 	 CMD_PathToCommand(CMD_directionList, CMD_commandList,(MAZE_DIRECTIONS*)MAZE_path);
 
 	 INSTR_AverageVelocity = avgVel;
-     MOUSE_PrepareToStart();
+
+	 // list with instructions will be updated
+	 // from now robot starts moving
+	 MOTION_UpdateList();
+	 MOTION_instrID = 0;
+
 
 	 while(1){
 
 		 //TODO : crash detection
 		 MOUSE_ChcekForNewComand();
 
-
-		 MOTION_UpdateList();
-
 		 //finish
-		 if(     MOUSE_CellPosition == 0x77 ||\
-				 MOUSE_CellPosition == 0x78 ||\
-				 MOUSE_CellPosition == 0x87 ||\
-				 MOUSE_CellPosition == 0x88 ){
+		 if(     MOUSE_CellPosition == finalCell){
 
 			 ACTUATOR_LED(-1, -1, 200);
-			 HAL_Delay(2000);
+			 HAL_Delay(1000);
 			 ACTUATOR_LED(-1, -1, 0);
 			 break;
 		 }
@@ -333,3 +335,17 @@ uint8_t MOUSE_ChcekForNewComand(){
 	// In place turns
 
 }
+MOUSE_Test(){
+
+	 MAZE_updatePath(0x00, 0x02);
+	 CMD_AbsolutePathToRelative( (MAZE_DIRECTIONS*) MAZE_path, CMD_directionList, MOUSE_CellOrientation);
+	 CMD_PathToCommand(CMD_directionList, CMD_commandList, (MAZE_DIRECTIONS*) MAZE_path);
+
+	 MOTION_UpdateList();
+	 MOTION_instrID = 0;
+
+	 // wait
+	 while(INSTR_InstrListUsedInstr!=MOTION_instrID );
+
+
+};

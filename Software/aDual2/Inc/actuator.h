@@ -53,7 +53,7 @@ void ACTUATOR_LED(int16_t red, int16_t green, int16_t blue);
 void ACTUATOR_BuzzerStart(uint16_t);
 
 //
-void ACTUATOR_MotorSetPWM(uint8_t, uint8_t);
+void ACTUATOR_MotorSetPWM(uint8_t motorSelect, float duty);
 
 
 #endif /* ACTUATOR_H_ */

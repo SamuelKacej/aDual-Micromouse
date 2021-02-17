@@ -64,14 +64,14 @@ void ACTUATOR_LED(int16_t red, int16_t green, int16_t blue){
 }
 
 
-void ACTUATOR_MotorSetPWM(uint8_t motorSelect, uint8_t dutyCycle){
-	// motor select 'R' or 'L' motor
-	// dutyCycle 0-255
+void ACTUATOR_MotorSetPWM(uint8_t motorSelect, float dutyCycle){
+	// motor select 'R'=1 or 'L'=0 motor
+	// dutyCycle <0; 1>
 
 	if(motorSelect == ACT_MOTOR_L){
-		ACT_MOTOR_L_CCR =(ACT_MOTOR_L_PERIOD*dutyCycle)/255;
+		ACT_MOTOR_L_CCR = (uint16_t)(ACT_MOTOR_L_PERIOD*dutyCycle);
 	}
 	if(motorSelect == ACT_MOTOR_R){
-		ACT_MOTOR_R_CCR =(ACT_MOTOR_R_PERIOD*dutyCycle)/255;
+		ACT_MOTOR_R_CCR = (uint16_t)(ACT_MOTOR_R_PERIOD*dutyCycle);
 	}
 }

@@ -1,8 +1,8 @@
 correction.c:13:9:CORR_FindCornerInRotation	16	static
 correction.c:48:6:CORR_ForwardCorner	4	static
-correction.c:58:6:CORR_PrepareToStart	16	static
-correction.c:105:6:CORR_PerpendicularToForward	48	static
-correction.c:139:6:CORR_ParallelToSide	24	static
-correction.c:182:9:CORR_isPositionForSideCorrection	16	static
-correction.c:194:6:CORR_CorrectionRotation	4	static
-correction.c:198:6:CORR_Diagonal	4	static
+correction.c:58:6:CORR_PrepareToStart	4	static
+correction.c:70:6:CORR_PerpendicularToForward	48	static
+correction.c:104:6:CORR_ParallelToSide	24	static
+correction.c:147:9:CORR_isPositionForSideCorrection	16	static
+correction.c:159:6:CORR_CorrectionRotation	4	static
+correction.c:163:6:CORR_Diagonal	4	static

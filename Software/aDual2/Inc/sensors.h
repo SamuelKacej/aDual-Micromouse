@@ -50,7 +50,7 @@
 #define SENSOR_FILTER_LENGTH 5
 
 // simple kalman filter for velocity
-#define VELOCITY_FILTER_COEFICIENT 4
+#define VELOCITY_FILTER_COEFICIENT 10
 
 float SENSORS_transPos; //mm
 float SENSORS_transVel;

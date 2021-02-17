@@ -13,9 +13,34 @@ uint8_t MAZE_wasChanged  = 0;
 void MAZE_writeCell(uint8_t address, uint8_t walls, uint8_t cost){
 
 	if(MAZE_maze[address].wall != walls){
+
 		MAZE_maze[address].wall = walls;
+
+		const uint8_t addrX = address / MAZE_SIZE_X;
+		const uint8_t addrY = address % MAZE_SIZE_X;
+
+
+		//write wall in to cell on other side of the wall
+
+		//south cell
+		if(addrY >1 && walls & 0b0001){
+			MAZE_maze[MAZE_ADDR(addrX, addrY-1)].wall |= 0b0100;
+		}
+		//east cell
+		if(addrX < (MAZE_SIZE_X-1) && walls & 0b0010){
+			MAZE_maze[MAZE_ADDR(addrX+1, addrY)].wall |= 0b1000;
+		}
+		//north cell
+		if(addrY < (MAZE_SIZE_Y-1) && walls & 0b0100){
+			MAZE_maze[MAZE_ADDR(addrX, addrY+1)].wall |= 0b0001;
+		}
+		//west cell
+		if(addrX >1 && walls & 0b1000){
+			MAZE_maze[MAZE_ADDR(addrX-1, addrY)].wall |= 0b0010;
+		}
+
 		MAZE_wasChanged = 1;
-		//TODO write wall from other side
+
 	}
 	if( cost != 0xFF){
 		MAZE_maze[address].cost = cost;
@@ -69,7 +94,7 @@ void MAZE_floodfill( MAZE_CELL* maze, MAZE_DIRECTIONS* path, uint8_t fromCell, u
 	MAZE_CELL* pMazeCell = &maze[toCell];
 	uint8_t direction = 0;
 
-	for(uint16_t i = 255; i>=0 ;i--){
+	for(int16_t i = 255; i>=0 ;i--){
 
 		MAZE_path[i].cell = pMazeCell;
 		MAZE_path[i].absoluteDirection = MAZE_reverseDirection(direction);
@@ -78,7 +103,7 @@ void MAZE_floodfill( MAZE_CELL* maze, MAZE_DIRECTIONS* path, uint8_t fromCell, u
 		if(pMazeCell->address== fromCell){
 
 
-			// This remove empty directions at begin of array
+			// This removes empty directions at begin of array
 			// ... maze_path was filled from the end 255->0
 			if(i>0)
 			for(uint16_t j = 0; j < 256  ; j++){
@@ -194,6 +219,10 @@ void MAZE_SetCostOfNeighbors(MAZE_CELL* maze, uint8_t addr){
 
 void MAZE_ClearMaze(MAZE_CELL* maze){
 
+	for(uint16_t i = 0 ; i < MAZE_PATH_SIZE ; i++){
+		MAZE_path[i].cell = &maze[0];
+	}
+
 	for(uint16_t i = 0 ; i < MAZE_SIZE_X ; i++){
 		for(uint16_t j = 0 ; j<MAZE_SIZE_Y ; j++){
 
@@ -216,6 +245,5 @@ void MAZE_ClearMaze(MAZE_CELL* maze){
 		}
 	}
 }
-
 
 

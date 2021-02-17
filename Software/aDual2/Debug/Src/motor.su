@@ -1,7 +1,8 @@
 motor.c:12:6:MOTOR_ControllerReset	16	static
-motor.c:27:6:MOTOR_INIT	8	static
-motor.c:54:6:MOTOR_ControllerSet	24	static
-motor.c:63:16:MOTOR_ControllerUpdate	32	static
-motor.c:93:6:MOTOR_SetVoltage	24	static
-motor.c:125:6:MOTOR_SetMoment	24	static
-motor.c:142:6:MOTOR_SetVelocity	16	static
+motor.c:31:6:MOTOR_INIT	8	static
+motor.c:58:6:MOTOR_ControllerSet	24	static
+motor.c:67:16:MOTOR_ControllerUpdate	40	static
+motor.c:111:6:MOTOR_SetVoltage	24	static
+motor.c:144:5:MOTOR_GetCurrentSign	24	static
+motor.c:162:6:MOTOR_SetMoment	56	static
+motor.c:195:6:MOTOR_SetVelocity	32	static

@@ -37,7 +37,7 @@
  *  if the function need to accelerate to get to the target in the time
  * */
 
-#define INSTR_LIST_HALF_SIZE 16
+#define INSTR_LIST_SIZE 256
 
 
 #define PI 3.1416
@@ -67,6 +67,7 @@ typedef struct _INSTRUCTION_{
 		float	distBegin;	// mm, dist at begin of instruction
 		float	distEnd; 	// mm, distance at the end of instruction
 
+
 	// ROTATION
 
 		// sinusoidal movement
@@ -80,21 +81,25 @@ typedef struct _INSTRUCTION_{
 
 		uint8_t continuance;// 0-100%
 
+		// if next instraction start at different velocity (mainly stop)
+		uint8_t slowDownCont; // continuance at which it start deaccelereting (-accel)
+							  //if cont>slowDownCont? accel = -accel
+
 		struct _INSTRUCTION_* next;
 
 }INSTR_INSTRUCTION;
 
 
-INSTR_INSTRUCTION INSTR_InstrList[2*INSTR_LIST_HALF_SIZE];
-uint8_t INSTR_InstrListUsedInstr[2];	//how many of InstrList is calculated
+INSTR_INSTRUCTION INSTR_InstrList[INSTR_LIST_SIZE];
+uint8_t INSTR_InstrListUsedInstr;	//how many of InstrList is calculated
 uint16_t INSTR_CommandListIndex;		// define from which ID wil be comands tgranslated
 uint8_t INSTR_ListAlreadyUpdated;		// allows precalculation of list
 
-void INSTR_FillHalfList( uint8_t );
+void INSTR_FillList( INSTR_INSTRUCTION* instrList);
 	// motion control shoud call this function
 	// to update half of the list (0 or 1)
 
-uint16_t INSTR_CmdToInstr( CMD_COMMAND* , uint16_t* , INSTR_INSTRUCTION*);
+uint16_t INSTR_CmdToInstr( CMD_COMMAND* , uint16_t*,  INSTR_INSTRUCTION*);
 	// wite max INSTR_LIST_SIZE to list
 	// return number of written instractions
 

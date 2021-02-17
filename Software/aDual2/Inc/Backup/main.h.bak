@@ -63,6 +63,9 @@ volatile uint32_t MAIN_tPeriod, MAIN_tStart;
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define GPIO_SW_Pin GPIO_PIN_13
+#define GPIO_SW_GPIO_Port GPIOC
+#define GPIO_SW_EXTI_IRQn EXTI15_10_IRQn
 #define ADC_IR_LD_Pin GPIO_PIN_0
 #define ADC_IR_LD_GPIO_Port GPIOC
 #define ADC_IR_LS_Pin GPIO_PIN_1

@@ -1,6 +1,7 @@
 mouse.c:14:6:MOUSE_printSensDist	104	static
 mouse.c:28:9:MOUSE_SearchRun	24	static
-mouse.c:136:9:MOUSE_SpeedRun	16	static
-mouse.c:174:9:MOUSE_ReturnToStart	16	static
-mouse.c:207:9:MOUSE_UpdateAbsoluOrientation	4	static
-mouse.c:233:9:MOUSE_ChcekForNewComand	24	static
+mouse.c:135:9:MOUSE_SpeedRun	16	static
+mouse.c:176:9:MOUSE_ReturnToStart	16	static
+mouse.c:209:9:MOUSE_UpdateAbsoluOrientation	4	static
+mouse.c:235:9:MOUSE_ChcekForNewComand	24	static
+mouse.c:338:1:MOUSE_Test	8	static

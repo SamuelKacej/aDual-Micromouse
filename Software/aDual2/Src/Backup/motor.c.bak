@@ -22,6 +22,9 @@ void MOTOR_ControllerReset(PID_CONTROLLER* pid){
 
 	pid->b = 1;
 	pid->c = 1;
+	pid->uPrevTime = MAIN_GetMicros();
+
+
 
 }
 void MOTOR_INIT(){
@@ -30,13 +33,13 @@ void MOTOR_INIT(){
 	// output is required current
 	MOTOR_ControllerReset(&MOTOR_currentController[MOTOR_ML]);
 	MOTOR_currentController[MOTOR_ML].Tx =0;
-	MOTOR_currentController[MOTOR_ML].maxU = +255;
-	MOTOR_currentController[MOTOR_ML].minU = -255;
+	MOTOR_currentController[MOTOR_ML].maxU = +1;
+	MOTOR_currentController[MOTOR_ML].minU = -1;
 
 	MOTOR_ControllerReset(&MOTOR_currentController[MOTOR_MR]);
 	MOTOR_currentController[MOTOR_MR].Tx = 0;
-	MOTOR_currentController[MOTOR_MR].maxU = +255;
-	MOTOR_currentController[MOTOR_MR].minU = -255;
+	MOTOR_currentController[MOTOR_MR].maxU = +1;
+	MOTOR_currentController[MOTOR_MR].minU = -1;
 
 	// output is requred moment
 	MOTOR_ControllerReset(&MOTOR_velocityController[MOTOR_ML]);
@@ -60,18 +63,30 @@ void MOTOR_ControllerSet( PID_CONTROLLER* pid,\
 }
 
 
-volatile float MOTOR_ControllerUpdate( PID_CONTROLLER* pid, float requiredValue, float feedback){
+volatile float MOTOR_ControllerUpdate( PID_CONTROLLER* pid, float requiredValue, float feedback, uint32_t uTime){
 	// return is otuput of PID
 
+	// dt
+	const float dt 	= 2.5e-3;//(uTime - pid->uPrevTime)*1e-6;
+	pid->uPrevTime = uTime;
+
+	//feedforward
+	pid->U  = pid->feedfwd_0order * requiredValue;
+	pid->U += pid->feedfwd_1order * (requiredValue-pid->W)/dt;
+
+	//inputs
 	pid->W	= requiredValue;
 	pid->FB 	= feedback;
 	pid->E = requiredValue - feedback;
 
+
+	// pid coeficients
 	const float eP 	= pid->b*requiredValue - feedback;
 	const float eD	= pid->c*requiredValue - feedback;
-	pid->E_Sum = pid->E_Sum + pid->E;
+	pid->E_Sum = pid->E_Sum + pid->E *dt;
 
-	pid->U = pid->P*eP + pid->I*pid->E_Sum + pid->D*(eD - pid->E_Prev);
+	// Output
+	pid->U += pid->P*eP + pid->I*pid->E_Sum + pid->D*(eD - pid->E_Prev)/dt;
 	pid->E_Prev = eD;
 
 	// antiwind-up
@@ -90,27 +105,28 @@ volatile float MOTOR_ControllerUpdate( PID_CONTROLLER* pid, float requiredValue,
 
 }
 
-void MOTOR_SetVoltage(uint8_t motorSelect, int16_t voltage){
+void MOTOR_SetVoltage(uint8_t motorSelect, float duty){
 	// left motor = 0 ; right motor = 1
-	// voltage  +-255
+	// duty <-1; 1>
 
 	// get absolute value
-	uint8_t pwm = (voltage <0)? -voltage : voltage;
-	pwm = (pwm>254)? 254:pwm;
-	// In 100% will driver get stucked in OC protection
+	float pwm = (duty <0)? -duty : duty;
+	pwm = (pwm>0.99)? 0.99:pwm;
+	// In duty 100% will driver get stucked in OC protection
 
 
 	// set direction
 	if(motorSelect == MOTOR_ML){
-
-		if(voltage <0)
+		// left
+		if(duty <0)
 			HAL_GPIO_WritePin(MOTOR_ML_DIR_PORT, MOTOR_ML_DIR_PIN, GPIO_PIN_RESET);
 		else
 			HAL_GPIO_WritePin(MOTOR_ML_DIR_PORT, MOTOR_ML_DIR_PIN, GPIO_PIN_SET);
 
 	}else{
+		// right
 
-		if(voltage <0)
+		if(duty <0)
 			HAL_GPIO_WritePin(MOTOR_MR_DIR_PORT, MOTOR_MR_DIR_PIN, GPIO_PIN_SET);
 		else
 			HAL_GPIO_WritePin(MOTOR_MR_DIR_PORT, MOTOR_MR_DIR_PIN, GPIO_PIN_RESET);
@@ -122,17 +138,50 @@ void MOTOR_SetVoltage(uint8_t motorSelect, int16_t voltage){
 	ACTUATOR_MotorSetPWM(motorSelect, pwm);
 }
 
+int MOTOR_GetCurrentSign(uint8_t motorSelect){
+
+	// returns signum +/-
+	if(motorSelect == MOTOR_ML){
+			// left
+
+			const uint8_t state = HAL_GPIO_ReadPin(MOTOR_ML_DIR_PORT, MOTOR_ML_DIR_PIN);
+			return (state==0)? -1: +1;
+
+		}else{
+			// right
+
+			const uint8_t state = HAL_GPIO_ReadPin(MOTOR_MR_DIR_PORT, MOTOR_MR_DIR_PIN);
+			return (state==0)? 1: -1;
+
+		}
+
+}
 void MOTOR_SetMoment(uint8_t motorSelect, float requiredMoment ){
-	// [Nm]
+	// required Torque is in Nm
 
 	const float requiredCurrent = requiredMoment*MOTOR_CONST_M_I;// unit is A
 
-	float tmpU;
-	if(requiredMoment == 0)
-		tmpU = 0;
-	else
-		 tmpU = MOTOR_ControllerUpdate(&MOTOR_currentController[motorSelect], \
-				requiredCurrent, ((float)SENSORS_motorI[motorSelect])/1000);	// mA->A
+	float measuredCurrent; // mA
+	const uint8_t filtCoeficient = 3;
+
+	// because of filter, needs separate static
+	if(motorSelect == MOTOR_ML){
+
+		static int16_t currentL_prev = 0;
+		const int16_t current = ((int)SENSORS_motorI[motorSelect])*MOTOR_GetCurrentSign(motorSelect);
+		currentL_prev =currentL_prev + (current-currentL_prev)/ filtCoeficient;
+		measuredCurrent = (float) currentL_prev;
+	}else{
+		static int16_t currentR_prev = 0;
+		const int16_t current = ((int)SENSORS_motorI[motorSelect])*MOTOR_GetCurrentSign(motorSelect);
+		currentR_prev = currentR_prev + (current-currentR_prev)/ filtCoeficient;
+		measuredCurrent = (float) currentR_prev;
+	}
+
+
+
+	const float tmpU = MOTOR_ControllerUpdate(&MOTOR_currentController[motorSelect], requiredCurrent,\
+			measuredCurrent/1000.0, MAIN_GetMicros());	// mA->A
 
 	MOTOR_SetVoltage(motorSelect, tmpU);
 
@@ -144,12 +193,15 @@ void MOTOR_SetVelocity(uint8_t motorSelect, float requiredVelocity){
 	// TODO ADAPTIVE Controller
 
 	MOTOR_ControllerUpdate(&MOTOR_velocityController[motorSelect], \
-			requiredVelocity, SENSORS_velocity[motorSelect]);
+			requiredVelocity, SENSORS_velocity[motorSelect], \
+			MAIN_GetMicros());
 
+	/*
 	if(requiredVelocity == 0 ){
 		MOTOR_velocityController[motorSelect].U = 0;
-
 	}
+	*/
+
 	MOTOR_SetMoment(motorSelect, MOTOR_velocityController[motorSelect].U);
 
 	//TOTO TU PADA ten printf

@@ -19,14 +19,15 @@ void MOTION_Init(float tP,float tI,float tD,float aP,float aI,float aD){
 	 INSTR_VelocityPeak	 	= 1500;	// mm/s , < 1000 ; 3500 > Translational
 	 INSTR_AverageVelocity 	= 500; 	// mm/s , <  250 ; 1500 > Translational
 
-	 INSTR_MaxTransAccel 	= 9100;	// mm/s    1 g =~ 9807mm/s
+	 INSTR_MaxTransAccel 	= 5000;	// mm/s    1 g =~ 9807mm/s
 
 	 INSTR_MaxAngVelocity 	= 2*PI;	// rad/s
 
 	 //in place turn acceleration
 
-	 MOTION_instrID = 2*INSTR_LIST_HALF_SIZE -1;
+	 MOTION_instrID = INSTR_LIST_SIZE -1;
 	 MOTION_ExternalAngCorrection = 0;
+	 MOTION_ExternalTransCorrection = 0;
 	 insList = INSTR_InstrList;
 
 	 MOTION_RequestNewInstruction = 0;
@@ -62,10 +63,6 @@ void MOTION_Update(){
 
 	// calc period
 
-	//printIstr(MOTION_instrID);
-
-
-
 	const uint32_t time = MAIN_GetMicros();
 	MOTION_uTimePeriod = (time-prevTime);// us
 	prevTime = time;
@@ -73,20 +70,19 @@ void MOTION_Update(){
 
 	// Chcek if actual instraction was finished
 	MOTION_ChcekForNewInstraction();
-/*
-	if(MOTION_instrID%2)
-		ACTUATOR_LED(-1, 0, 130);
-	else
-		ACTUATOR_LED(-1, 130, 0);
-*/
+
 	// processed actauall instraction
 	MOTION_ProcessedInstraction(&insList[MOTION_instrID]);
 
 
 }
 
-uint8_t MOTION_UpdateList(){
+void MOTION_UpdateList(){
 	/*
+	 * THIS FUNCTION SHOULD BE CALLED ONCE
+	 *
+	 *
+	 *
 	 * return 1 if list was updated
 	 * return 0 if list was not updated
 	 * CALL IT FROM MAIN THREAD
@@ -98,7 +94,7 @@ uint8_t MOTION_UpdateList(){
 	 *
 	 *
 	 */
-
+/*
 	if(INSTR_ListAlreadyUpdated == 0){
 
 		if(MOTION_instrID < INSTR_LIST_HALF_SIZE){
@@ -115,7 +111,9 @@ uint8_t MOTION_UpdateList(){
 		return 1;
 	}
 
-	return 0;
+	return 0;*/
+
+	return INSTR_FillList(INSTR_InstrList);
 }
 
 
@@ -128,11 +126,19 @@ void MOTION_ProcessedInstraction(INSTR_INSTRUCTION* instrActual){ // updated
 
 
 	// calc Velocity
-	float newVelA, newVelT;
+
+	//float newVelT = SENSORS_transVel;
+	//float newVelA = SENSORS_angleVel;
+	float newVelT, newVelA;
 	MOTION_StepVelocity(instrActual, &newVelT, &newVelA);
 
+	printf("%.1f, %.1f\r\n", SENSORS_transVel, newVelT);
+
+
 	// set volocity
-	MOTION_SetVelocity(newVelT, newVelA + MOTION_ExternalAngCorrection);
+	MOTION_SetVelocity(newVelT + MOTION_ExternalTransCorrection, newVelA + MOTION_ExternalAngCorrection);
+	MOTION_ExternalAngCorrection = 0; // reset correction
+	MOTION_ExternalTransCorrection = 0; // reset correction
 
 
 }
@@ -148,6 +154,8 @@ static float MOTION_SinusoidalVel(float phi, float time, float continuance){
 	 *
 	 */
 	//time = 1; // we calculate relative continuance, not velocity in total time;
+
+
 	return  phi * M_PI * sin(M_PI*continuance) / (2*time);
 }
 
@@ -185,7 +193,7 @@ void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float* angul
 			instr->continuance = (angleContinuance)*100;
 			//if u stop you will have allways continuance 0 (you can't start)
 			// I think only this bridge of IF does need this initial step
-			const float tmpContinuanceAngle1 = (tmpContinuanceAngle<0.05)? 0.05: angleContinuance;
+			const float tmpContinuanceAngle1 = (tmpContinuanceAngle<0.02)? 0.02: angleContinuance;
 
 			// In-place turn
 			*transVel = 0;
@@ -202,35 +210,59 @@ void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float* angul
 			// TODO overshoot protection
 
 			// translational vector is controled by angular vector, for synchronization;
-			*transVel = instr->speed * pow(2,(-(transContiunacne - angleContinuance)));
+			*transVel = instr->speed * pow(2,( angleContinuance - transContiunacne));
 
 		}
 	} else if (instr->accel !=0){
 
 
+		*angularVel = 0; // rotation is not allowed
+
 		instr->continuance = 100*(SENSORS_transPos - instr->distBegin)/ instr->dist;
 
+		static float slowDownCNT = 0;
 		//speed up
 
-		// time instance is used as counter.
+		if(instr->continuance <= instr->slowDownCont){
+			// time instance is used as counter.
+			// TODO time sa musi vynulovat?
+			instr->time +=  MOTION_uTimePeriod*(1e-6);
+			*transVel = instr->accel * instr->time;// vzdy to pojde od 0-to je trocha zle
 
-		// TODO time sa musi vynulovat?
-		instr->time +=  MOTION_uTimePeriod*(1e-6);
-		*transVel = instr->accel * instr->time;
+			// overshoot protection
+			if(instr->accel > 0 && *transVel > instr->speed)
+				*transVel = instr->speed;
+			if(instr->accel < 0 && *transVel < instr->speed)
+				*transVel = instr->speed;
+			slowDownCNT = 0;
+		}else{// slow down if requested
+			slowDownCNT +=  MOTION_uTimePeriod*(1e-6);
+			*transVel =  instr->speed - instr->accel * slowDownCNT;
 
-		// overshoot protection
-		if(instr->accel > 0 && *transVel > instr->speed)
-			*transVel = instr->speed;
-		if(instr->accel < 0 && *transVel < instr->speed)
-			*transVel = instr->speed;
+			// overshoot protection
+			if(instr->accel > 0 && *transVel < 20) // you are using -accel
+				*transVel = 20;
+			if(instr->accel < 0 && *transVel > -20)
+				*transVel = -20;
 
-		*angularVel = 0; // rotation is not allowed
+			}
+
 
 	}else{
 		// const speed
 		*angularVel = 0;
-		*transVel = instr->speed;
-		 instr->continuance = 100*(SENSORS_transPos - instr->distBegin)/ instr->dist;
+
+		// speed up if actual velocity and target are different
+		// todo proper acceleration with instr->time
+		if(SENSORS_transVel < ((instr->speed)-200)){
+			*transVel = SENSORS_transVel + 120;
+		}else if(SENSORS_transVel > ((instr->speed)+200)){
+			*transVel = SENSORS_transVel - 120;
+		}else{
+			*transVel = instr->speed;
+		}
+
+		instr->continuance = 100*(SENSORS_transPos - instr->distBegin)/ instr->dist;
 	}
 
 
@@ -283,11 +315,10 @@ void MOTION_ChcekForNewInstraction(){ // updated
 uint8_t MOTION_NewInstraction(){
 
 
-	//TODO : confirm that half-list was pre-calculated,
-	//		error return
-
 	const float distTrans = SENSORS_transPos;
 	const float distAng	  = SENSORS_anglePos;
+
+
 
 	// move circularly id
 	MOTION_MoveInstrId();
@@ -315,79 +346,16 @@ void MOTION_resetList(int id){
 
 }
 
-void MOTION_uTurnTest(){
-//Z turne
-
-	const int vel = 1000;
-
-	int id = 0;
-	MOTION_resetList(id);
-	id++;
-
-
-	MOTION_resetList(id);
-	insList[id].command = CMD_FWD0 + 1;
-	insList[id].dist   	= CELL_DIMENSION;
-	insList[id].speed  	= vel;
-	insList[id].accel	= vel*vel/2/CELL_DIMENSION;
-	id++;
-
-	MOTION_resetList(id);
-	insList[id].command = CMD_FWD0 + 1;
-	insList[id].dist   	= CELL_DIMENSION;
-	insList[id].speed  	= 2*vel;
-	insList[id].accel	= 0;
-	id++;
-/*
-				//    list,  angle, radius, velocity ,
-	INSTR_AddArc(&insList[id], - 135, 73, vel, CMD_SD135R);
-	id++;
-
-
-	MOTION_resetList(id);
-	insList[id].command = CMD_FWD0 + 1;
-	insList[id].dist   	= 1* CELL_DIMENSION * 0.707;
-	insList[id].speed  	= vel;
-	id++;
-
-	INSTR_AddArc(&insList[id], 135, 73, vel, CMD_DS135L);
-	id++;
-
-	MOTION_resetList(id);
-	insList[id].command = CMD_FWD0 + 1;
-	insList[id].dist   	= 1*CELL_DIMENSION;
-	insList[id].speed  	= 0;
-	insList[id].accel	= -vel*vel/2/CELL_DIMENSION;
-	id++;
-
-*/
-	MOTION_resetList(id);
-	insList[id].command = CMD_FWD0 + 1;
-	insList[id].dist   	= 1*CELL_DIMENSION;
-	insList[id].speed  	= 0;
-	insList[id].accel	= -vel*vel/CELL_DIMENSION;
-	id++;
-
-	MOTION_resetList(id);
-	id++;
-
-
-	MOTION_resetList(id);
-	id++;
-
-	MOTION_resetList(id);
-	INSTR_InstrListUsedInstr[0] = id;
-	INSTR_InstrListUsedInstr[1] = 0;
-
-}
-
 static uint8_t MOTION_GetNextInstrID(uint8_t idOffset){
+	// TODO recreate this fcn
 	// function return id of next element in MOTION_instrID
 	// idOffset -> offset from actual instruction (0 = actual instr, 1 = next instr, ...)
 
 	// circular move
-	uint8_t tmpID = (MOTION_instrID + idOffset) % (2*INSTR_LIST_HALF_SIZE);
+	uint8_t tmpID = (MOTION_instrID + idOffset) % (INSTR_LIST_SIZE);
 
+
+	/* OLD instr list
 	// does it use first or second half of list
 	const uint8_t halfList = (tmpID < INSTR_LIST_HALF_SIZE)? 0 : 1 ;
 
@@ -400,6 +368,7 @@ static uint8_t MOTION_GetNextInstrID(uint8_t idOffset){
 		// so go to begin of other half
 		tmpID = (halfList == 0 )? INSTR_LIST_HALF_SIZE : 0 ;
 	}
+	*/
 
 	return tmpID;
 }
@@ -414,15 +383,25 @@ void MOTION_MoveInstrId(){// updated
 	 */
 
 
-	MOTION_instrID = MOTION_GetNextInstrID(1);
+	// reset finished element
+	INSTR_ResetInstrList(&INSTR_InstrList[MOTION_instrID], 1);
+	MOTION_instrID = (MOTION_instrID +1 ) % INSTR_LIST_SIZE;
+
+
+
+
+			/*
+			 * MOTION_instrID =MOTION_GetNextInstrID(1);
 
 	// if u are at begin of list:
 	// allow precalculation of other half  list instractions
 	if(MOTION_instrID == 0 || MOTION_instrID == INSTR_LIST_HALF_SIZE)
 		INSTR_ListAlreadyUpdated = 0;// other list is not pre-calculated
+	*/
 }
 
 INSTR_INSTRUCTION* MOTION_GetNextInstruction(uint8_t idOffset){
+
 	return &insList[MOTION_GetNextInstrID(idOffset)];
 }
 
@@ -459,6 +438,8 @@ void MOTION_SetVelocity(float transV, float angularV){
 	MOTOR_SetVelocity(MOTOR_ML, velL_req);
 	MOTOR_SetVelocity(MOTOR_MR, velR_req);
 
+
+
 }
 
 void MOTION_inPlaceRotation(int angleDeg){
@@ -476,8 +457,7 @@ void MOTION_inPlaceRotation(int angleDeg){
 	id++;
 	MOTION_resetList(id);
 
-	INSTR_InstrListUsedInstr[0] = id-1;
-	INSTR_InstrListUsedInstr[1] = 0;
+	INSTR_InstrListUsedInstr = id-1;
 
 	MOTION_UpdateList();
 

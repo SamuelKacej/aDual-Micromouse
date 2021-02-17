@@ -1,8 +1,8 @@
 main.c:56:6:MAIN_SetPIDs	8	static
-main.c:106:5:_write	32	static
-main.c:122:5:main	24	static
-main.c:282:6:SystemClock_Config	88	static
-main.c:323:19:MAIN_GetMicros	4	static
-main.c:327:6:HAL_TIM_PeriodElapsedCallback	16	static
-main.c:364:6:HAL_ADC_ConvCpltCallback	16	static
-main.c:385:6:Error_Handler	4	static
+main.c:121:5:_write	32	static
+main.c:137:5:main	24	static
+main.c:293:6:SystemClock_Config	88	static
+main.c:334:19:MAIN_GetMicros	4	static
+main.c:338:6:HAL_TIM_PeriodElapsedCallback	16	static
+main.c:392:6:HAL_ADC_ConvCpltCallback	16	static
+main.c:413:6:Error_Handler	4	static

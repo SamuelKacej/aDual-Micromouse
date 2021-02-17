@@ -132,9 +132,7 @@ void MOTION_ProcessedInstraction(INSTR_INSTRUCTION* instrActual){ // updated
 	float newVelT, newVelA;
 	MOTION_StepVelocity(instrActual, &newVelT, &newVelA);
 
-	//printf("%.1f, %.1f, %.1f, \r\n",instrActual->speed, SENSORS_transVel, newVelT);
-
-
+	printf("%.1f, %.1f\r\n", SENSORS_transVel, newVelT);
 
 
 	// set volocity
@@ -195,7 +193,7 @@ void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float* angul
 			instr->continuance = (angleContinuance)*100;
 			//if u stop you will have allways continuance 0 (you can't start)
 			// I think only this bridge of IF does need this initial step
-			const float tmpContinuanceAngle1 = (tmpContinuanceAngle<0.05)? 0.05: angleContinuance;
+			const float tmpContinuanceAngle1 = (tmpContinuanceAngle<0.02)? 0.02: angleContinuance;
 
 			// In-place turn
 			*transVel = 0;
@@ -439,6 +437,8 @@ void MOTION_SetVelocity(float transV, float angularV){
 
 	MOTOR_SetVelocity(MOTOR_ML, velL_req);
 	MOTOR_SetVelocity(MOTOR_MR, velR_req);
+
+
 
 }
 

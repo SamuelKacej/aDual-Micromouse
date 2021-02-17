@@ -57,6 +57,14 @@ typedef struct {
 	float Tx;
 	float maxU, minU;
 
+	// feed forward
+	float feedfwd_0order; // multiply by W
+	float feedfwd_1order; // multiply by derivation of W
+
+
+	// dt micro seconds
+	uint32_t uPrevTime;
+
 } PID_CONTROLLER;
 
 
@@ -65,14 +73,14 @@ PID_CONTROLLER MOTOR_velocityController[2]; // velocity is in mm/s
 
 void MOTOR_INIT();
 
-void MOTOR_SetVoltage(uint8_t, int16_t);
+void MOTOR_SetVoltage(uint8_t motorSelect, float duty);
 
 void MOTOR_SetMoment(uint8_t motorSelect, float requiredMoment);
 
 // mm/s ; mS : 0=L, 1=R
 void MOTOR_SetVelocity(uint8_t motorSelect, float requiredVelocity);
 
-float MOTOR_ControllerUpdate( PID_CONTROLLER* pid, float requiredValue, float feedback);
+float MOTOR_ControllerUpdate( PID_CONTROLLER* pid, float requiredValue, float feedback, uint32_t uTime);
 
 void MOTOR_ControllerSet( PID_CONTROLLER*, float, float, float );
 

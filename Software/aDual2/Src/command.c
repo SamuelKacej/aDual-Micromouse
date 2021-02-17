@@ -358,6 +358,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 						cmdList[idx].dist = CELL_DIMENSION*x ;
 						cmdList[idx++].cmd = CMD_FWD0 +x;
 						state = CMD_STATE_STOP;
+						x = 0;
 						break;
 					case CMD_R:
 						//CMD_WritePossitionIntoCommand(&cmdList, cmdPrev, posIncrementX, posIncrementY, rotIncrement)
@@ -393,12 +394,14 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 						initPosOffset = 0;
 						cmdList[idx++].cmd = CMD_FWD0 +x;
 						state = CMD_STATE_ORTHO_L;
+						x = 0;
 						break;
 					case CMD_R:
 						cmdList[idx].dist = CELL_DIMENSION*x - initPosOffset;
 						initPosOffset = 0;
 						cmdList[idx++].cmd = CMD_FWD0 +x;
 						state = CMD_STATE_ORTHO_R;
+						x = 0;
 						break;
 					case CMD_S:
 
@@ -410,8 +413,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 							cmdList[idx].dist = CELL_DIMENSION*x -CELL_DIMENSION/2;
 						}
 
-						// todo SLOW DOWN
-						initPosOffset = 90;
+   					    initPosOffset = 90;
 						cmdList[idx++].cmd = CMD_FWD0+x;
 						state = CMD_STATE_STOP;
 						break;
@@ -439,7 +441,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 						break;
 					case CMD_S:
 						cmdList[idx++].cmd = CMD_SS90SR; //explore?
-						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx].dist = CELL_DIMENSION*1 - CELL_DIMENSION/2;
 						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
@@ -467,7 +469,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 						break;
 					case CMD_S:
 						cmdList[idx++].cmd = CMD_SS180R;
-						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx].dist = CELL_DIMENSION*1 - CELL_DIMENSION/2;
 						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
@@ -495,7 +497,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 						break;
 					case CMD_S:
 						cmdList[idx++].cmd = CMD_SS90SR; //explore?
-						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx].dist = CELL_DIMENSION*1 - CELL_DIMENSION/2;
 						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
@@ -523,7 +525,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 						break;
 					case CMD_S:
 						cmdList[idx++].cmd = CMD_SS180L;
-						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx].dist = CELL_DIMENSION*1 - CELL_DIMENSION/2;
 						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
@@ -553,7 +555,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 						//TODO DIAGONAL STOP CORRECTON
 						cmdList[idx++].cmd = CMD_DIA0+x;
 						cmdList[idx++].cmd = CMD_DS45R;
-						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx].dist = CELL_DIMENSION*1 - CELL_DIMENSION/2;
 						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
@@ -584,7 +586,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 					case CMD_S:
 						cmdList[idx++].cmd = CMD_DIA0+x;
 						cmdList[idx++].cmd = CMD_DS135L;
-						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx].dist = CELL_DIMENSION*1 - CELL_DIMENSION/2;
 						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
@@ -614,7 +616,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 					case CMD_S:
 						cmdList[idx++].cmd = CMD_DIA0+x;
 						cmdList[idx++].cmd = CMD_DS45L;
-						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx].dist = CELL_DIMENSION*1 - CELL_DIMENSION/2;
 						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;
@@ -645,7 +647,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 					case CMD_S:
 						cmdList[idx++].cmd = CMD_DIA0+x;
 						cmdList[idx++].cmd = CMD_DS135R;
-						cmdList[idx].dist = CELL_DIMENSION*x - CELL_DIMENSION/2;
+						cmdList[idx].dist = CELL_DIMENSION*1 - CELL_DIMENSION/2;
 						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;
 						break;

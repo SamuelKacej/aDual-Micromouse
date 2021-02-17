@@ -10,8 +10,6 @@
 
 
 #include "sensors.h"
-// TODO :
-//pridaj MOTOR_R define
 
 
 #define buffLengthADC1 4 //irFL irFR iM1 iM2
@@ -89,13 +87,39 @@ void SENSORS_Update(){
 
 	SENSORS_EncoderUpdateValues(); // 5us
 	SENSORS_AdcUpdateValues(); // this function takes around 110us
-	SENSORS_GyroUpdateValues(); //  takes  around 10ms
+	SENSORS_GyroUpdateValues(); //  call every 10ms
 
 	SENSORS_vectorsCalc(); // 5 us
 
 
 }
 
+void SENSORS_EncoderUpdateValues(){
+
+
+	for(uint8_t i=0; i<2 ; i++){
+
+		// get value from counter
+		uint32_t periodOfTimmer = htimEnc[i]->Init.Period;
+		SENSORS_valEnc[i] =  (encoderCarryCnt[i] * (int64_t)periodOfTimmer) + (uint32_t)htimEnc[i]->Instance->CNT;
+
+		// increments to mm
+		SENSORS_dist[i] = SENSORS_valEnc[i] * SENSORS_CONST_INC_MM;
+
+		// calc velocity
+		const uint32_t time = MAIN_GetMicros();
+		const volatile uint32_t deltaTime = time-prevTime[i];
+
+		SENSORS_velocity[i] = SENSORS_CONST_INC_MM*(1000000 *((float)SENSORS_valEnc[i]-prevDistEnc[i]))/(deltaTime);
+
+		prevTime[i] = time;
+		prevDistEnc[i] = SENSORS_valEnc[i];
+
+		// for debug
+
+
+	}
+}
 void SENSORS_vectorsCalc(){
 
 	// get time
@@ -104,14 +128,15 @@ void SENSORS_vectorsCalc(){
 	prevVectorTime = time;
 
 	// get motor distances
-	const float distL0 = SENSORS_valEnc[SENSORS_MOTOR_L] * SENSORS_CONST_INC_MM;
-	const float distR0 = SENSORS_valEnc[SENSORS_MOTOR_R] * SENSORS_CONST_INC_MM;
+	const float distL0 = (float)SENSORS_valEnc[SENSORS_MOTOR_L] * SENSORS_CONST_INC_MM; //(float)SENSORS_dist[SENSORS_MOTOR_L];
+	const float distR0 = (float)SENSORS_valEnc[SENSORS_MOTOR_R] * SENSORS_CONST_INC_MM; //(float)SENSORS_dist[SENSORS_MOTOR_R];
 
 	SENSOR_FilterAddFloat(distL0, &filterDistanceLeft);
 	SENSOR_FilterAddFloat(distR0, &filterDistanceRight);
 
 	const float distL = SENSOR_FilterGetFloat(&filterDistanceLeft);
 	const float distR = SENSOR_FilterGetFloat(&filterDistanceRight);
+
 
 
 	// precalculation
@@ -121,26 +146,35 @@ void SENSORS_vectorsCalc(){
 	const float newTransJerk 	= (1000000.0*(newTransAccel-SENSORS_transAccel))/dTime;
 
 
-	// TODO: add calculation from gyro
 	const float newAnglePos 	= (distR - distL)/ WHEEL_PITCH;
 	const float newAngleVel	 	= (1000000*(newAnglePos-SENSORS_anglePos))/dTime;
 	const float newAngleAccel 	= (1000000*(newAngleVel-SENSORS_angleVel))/dTime;
 	const float newAngleJerk 	= (1000000*(newAngleAccel-SENSORS_angleAccel))/dTime;
 
+	// simple kalman filter
+	static float filtTransVel  = 0;
+	static float filtAngleVel  = 0; // it is static...
+	filtTransVel = filtTransVel + (newTransVel - filtTransVel)/VELOCITY_FILTER_COEFICIENT;
+	filtAngleVel = filtAngleVel + (newAngleVel - filtAngleVel)/VELOCITY_FILTER_COEFICIENT;
+
 	// update
 	SENSORS_transPos 	= newTransPos;
-	SENSORS_transVel 	= newTransVel;
+	SENSORS_transVel 	= filtTransVel;
 	SENSORS_transAccel 	= newTransAccel;
 	SENSORS_transJerk 	= newTransJerk;
 
 	// TODO ak chces cez gyro filtrovat aj uhol musis sa usitit ze na zaciatku bol IRC a GYRO na rovnako...
-	SENSORS_anglePos 	= newAnglePos;
-	SENSORS_angleVel 	= (newAngleVel + SENSORS_xAngularVelocity)/2 ;
+	//SENSORS_anglePos 	= newAnglePos;
+	SENSORS_angleVel 	= (2*filtAngleVel + 8*SENSORS_xAngularVelocity)/10 ;
+	SENSORS_anglePos 	+= SENSORS_angleVel *dTime/1e6;
 	SENSORS_angleAccel 	= newAngleAccel;
 	SENSORS_angleJerk 	= newAngleJerk;
 
-
-	//printf("@ %.2f\t %.2f\t \r\n", distR0, distL0);
+	/*
+	uint8_t s[30];//7*3+3
+	const uint8_t len =  sprintf((char*)s,"%.1f\t %.2f\t %.2f\t \r\n", distL0, SENSORS_xAngularVelocity, dTime/1000 );
+	HAL_UART_Transmit(&huart3, s, len, 10);
+	*/
 
 }
 
@@ -154,7 +188,7 @@ void SENSORS_GyroUpdateValues(){
 	if(time - lastFcnCall > SENSORS_IMU_uTIMEOUT){
 		//TODO: sync IRC and xAngle
 		//SENSORS_xAngle = 100 * bno055_getEulerYaw(&SENSORS_HI2C);
-		SENSORS_xAngularVelocity = 100*bno055_getGyroZ(&SENSORS_HI2C);
+		SENSORS_xAngularVelocity = bno055_getGyroZ(&SENSORS_HI2C);
 		lastFcnCall = time;
 	}
 }
@@ -297,7 +331,6 @@ void SENSORS_irRead(uint16_t* sensorArray){
 	sensorArray[4] = valAdc2[0]; // DL
 	sensorArray[5] = valAdc1[0]; // FL
 
-
 }
 
 void SENSORS_AdcCallback(ADC_HandleTypeDef* hadc){
@@ -310,38 +343,6 @@ void SENSORS_AdcCallback(ADC_HandleTypeDef* hadc){
 	if (hadc->Instance == hadc3.Instance)
 			adcReadComplete |= 0b100;
 
-}
-
-void SENSORS_EncoderUpdateValues(){
-
-
-	for(uint8_t i=0; i<2 ; i++){
-
-		// get value from counter
-		uint32_t periodOfTimmer = htimEnc[i]->Init.Period;
-		SENSORS_valEnc[i] =  (encoderCarryCnt[i] * (int64_t)periodOfTimmer) + (uint32_t)htimEnc[i]->Instance->CNT;
-
-		// increments to mm
-		SENSORS_dist[i] = SENSORS_valEnc[i] * SENSORS_CONST_INC_MM;
-
-		// calc velocity
-		const uint32_t time = MAIN_GetMicros();
-		const volatile uint32_t deltaTime = time-prevTime[i];
-
-
-
-		SENSORS_velocity[i] = SENSORS_CONST_INC_MM*(1000000 *((float)SENSORS_valEnc[i]-prevDistEnc[i]))/(deltaTime);
-
-
-
-
-		prevTime[i] = time;
-		prevDistEnc[i] = SENSORS_valEnc[i];
-
-		// for debug
-
-
-	}
 }
 
 void SENSORS_EncoderTimCallback(TIM_HandleTypeDef *htim){
