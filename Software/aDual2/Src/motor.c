@@ -204,7 +204,7 @@ void MOTOR_SetVelocity(uint8_t motorSelect, float requiredVelocity){
 
 	// reset time integrator if robot is in stop
 	if((abs(requiredVelocity) <= 1) && (abs(SENSORS_velocity[motorSelect]) < 10) ){
-		MOTOR_velocityController[motorSelect].E_Sum = 0;
+		//MOTOR_velocityController[motorSelect].E_Sum = 0;
 	}
 
 	MOTOR_SetMoment(motorSelect, MOTOR_velocityController[motorSelect].U);

@@ -35,4 +35,6 @@ void MOUSE_Test();
 
 void MAUSE_Square( const uint8_t finalDest );
 
+CMD_WALLS_RELATIVE MOUSE_GetRelativeWalls();
+
 #endif /* MOUSE_H_ */

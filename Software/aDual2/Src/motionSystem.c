@@ -79,8 +79,11 @@ void MOTION_Update(){
 	// Chcek if actual instraction was finished
 	MOTION_ChcekForNewInstraction();
 
-	// processed actauall instraction
+	// Processed actauall instraction
 	MOTION_ProcessedInstraction(&insList[MOTION_instrID]);
+
+	// if robot crash it resets E_SUM of all controllers, also output will be set to 0
+	MOTION_CrashDetection();
 
 
 }
@@ -447,14 +450,17 @@ void MOTION_SetVelocity(float transV, float angularV){
 	MOTOR_ControllerUpdate(&MOTION_angularController, angularV, SENSORS_angleVel, MAIN_GetMicros());
 	MOTOR_ControllerUpdate(&MOTION_translationController, transV, SENSORS_transVel, MAIN_GetMicros());
 
-	printf("%f, %f, %f, %f \r\n", 100*MOTION_angularController.FB, 100*angularV, 100*MOTION_angularController.U, transV);
+	//printf("%f, %f, %f, %f \r\n", 100*MOTION_angularController.FB, 100*angularV, 100*MOTION_angularController.U, transV);
 
+
+	// Tieto vzorce su spravne nerozmyslaj uz nad tym - su dobre da sa to dokazat, ta dvojka tam ma byt! -Samo z minulosti
 	float velL_req = MOTION_translationController.U - MOTION_angularController.U*WHEEL_PITCH/2;
 	float velR_req = MOTION_translationController.U + MOTION_angularController.U*WHEEL_PITCH/2;
 
 
 	MOTOR_SetVelocity(MOTOR_ML, velL_req);
 	MOTOR_SetVelocity(MOTOR_MR, velR_req);
+
 
 
 
@@ -488,4 +494,40 @@ void MOTION_inPlaceRotation(int angleDeg){
 
 	ACTUATOR_LED(-1, -1, 0);
 
+}
+
+void MOTION_CrashDetection(){
+
+
+	#define abs(a)((a)<0)? -a:a
+
+	static int filtTransVel = 0;
+	static int filtAngVel = 0;
+	static int avgCurrent = 0; // total current from both of motors
+	const float filtCoef = 10;
+
+	// filtered values calculation
+	filtTransVel += (SENSORS_transVel - filtTransVel)/filtCoef;
+	filtTransVel += (SENSORS_angleVel - filtAngVel)/filtCoef;
+	avgCurrent += ((SENSORS_motorI[0]+SENSORS_motorI[1]) - avgCurrent)/filtCoef;
+
+	if(abs(filtTransVel) < 10 && abs(filtAngVel) < 10 && avgCurrent > 1000){
+		// robot has small velocity and high current
+		// so it is probably stucked
+
+		MOTOR_currentController[0].E_Sum = 0;
+		MOTOR_currentController[1].E_Sum = 0;
+		MOTOR_currentController[0].U = 0;
+		MOTOR_currentController[1].U = 0;
+
+		MOTOR_velocityController[0].E_Sum = 0;
+		MOTOR_velocityController[1].E_Sum = 0;
+		MOTOR_velocityController[0].U = 0;
+		MOTOR_velocityController[1].U = 0;
+
+		MOTION_angularController.E_Sum = 0;
+		MOTION_angularController.U = 0;
+		MOTION_translationController.E_Sum = 0;
+		MOTION_translationController.U = 0;
+	}
 }

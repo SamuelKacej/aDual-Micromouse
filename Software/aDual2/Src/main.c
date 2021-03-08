@@ -21,9 +21,9 @@
 #include "main.h"
 #include "adc.h"
 #include "dma.h"
-#include "fatfs.h"
+//#include "fatfs.h"
 #include "i2c.h"
-#include "sdio.h"
+//#include "sdio.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -70,19 +70,19 @@ void MAIN_SetPIDs(){
 	MOTOR_currentController[1].feedfwd_1order_T = 0;
 
 
-	// velocity
-	MOTOR_ControllerSet( &MOTOR_velocityController[1], 3e-7, 2e-6, 0);
+	// velocity										   3e-7, 2e-6, 0
+	MOTOR_ControllerSet( &MOTOR_velocityController[1], 3e-6, 1e-5, 0);
 	MOTOR_velocityController[1].b = 1;
 	MOTOR_velocityController[1].c = 1;
-	MOTOR_velocityController[1].feedfwd_0order_K = 2e-7;
+	MOTOR_velocityController[1].feedfwd_0order_K = 3e-7;
 	MOTOR_velocityController[1].feedfwd_1order_K = 4e-8;
 	MOTOR_velocityController[1].feedfwd_1order_T = 0.02;
 
 
-	MOTOR_ControllerSet( &MOTOR_velocityController[0], 3e-7, 2e-6, 0);
+	MOTOR_ControllerSet( &MOTOR_velocityController[0], 3e-6, 1e-5, 0);
 	MOTOR_velocityController[0].b = 1;
 	MOTOR_velocityController[0].c = 1;
-	MOTOR_velocityController[0].feedfwd_0order_K = 2e-7;
+	MOTOR_velocityController[0].feedfwd_0order_K = 3e-7;
 	MOTOR_velocityController[0].feedfwd_1order_K = 4e-8;
 	MOTOR_velocityController[0].feedfwd_1order_T = 0.02;
 
@@ -141,7 +141,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+   HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -159,8 +159,8 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_SDIO_SD_Init();
-  MX_FATFS_Init();
+ // MX_SDIO_SD_Init();
+ // MX_FATFS_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
   MX_ADC3_Init();
@@ -212,9 +212,11 @@ int main(void)
 
 
 
-  uint8_t LED_Pulse = 0;
 
   volatile uint32_t tStart = MAIN_GetMicros();
+
+  MOUSE_CellPosition = 0;
+  MOUSE_CellOrientation = ROT_NORTH;
 
   while (1)
   {
@@ -240,12 +242,7 @@ int main(void)
 	  	  }
 	    	  }
 
-	MOUSE_CellPosition = 0;
-	MOUSE_CellOrientation = ROT_NORTH;
 
-
-	//MOUSE_Test();
-	//HAL_Delay(1e4);
 
 
 	  ACTUATOR_LED(0, 0, 150);
@@ -253,18 +250,19 @@ int main(void)
 	  ACTUATOR_LED(0, 0, 0);
 	  HAL_Delay(100);
 
-	  MOUSE_SearchRun(400.0/1.3, 0x00, 0x21);
-	  //MAPPING_PrintMaze(MOUSE_CellPosition);
+	  MOUSE_Test();
+
+/*
+ * 	  MOUSE_SearchRun(500, 0x00, 0x21);
 	  HAL_Delay(500);
 
-	  MOUSE_SearchRun(600.0, MOUSE_CellPosition, 0x00);
-	  //MAPPING_PrintMaze(MOUSE_CellPosition);
+	  MOUSE_SearchRun(450.0, MOUSE_CellPosition, 0x00);
 	  HAL_Delay(500);
 
-//	  MOUSE_SpeedRun(1000.0, MOUSE_CellPosition, 0x21);
+	  MOUSE_SpeedRun(700.0, MOUSE_CellPosition, 0x21);
+*/
 
-
-	  HAL_TIM_Base_Stop_IT(&htim12);
+	//  HAL_TIM_Base_Stop_IT(&htim12);
 	  MOTOR_SetVoltage(1, 0);
 	  MOTOR_SetVoltage(0, 0);
 
@@ -275,7 +273,7 @@ int main(void)
 		  ACTUATOR_LED(-1, -1, 0);
 		  HAL_Delay(250);
 		  }
-  	HAL_TIM_Base_Start_IT(&htim12);
+  	//HAL_TIM_Base_Start_IT(&htim12);
 
 
     /* USER CODE END WHILE */
@@ -349,38 +347,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	  //TODO  battery chcek
 	  //	  volatile int sTime = MAIN_GetMicros();
-/*
-	  if(MAIN_GetMicros()>3e6)  speed = 4;
-	  if(MAIN_GetMicros()>5e6)  HAL_TIM_Base_Stop_IT(&htim12);
 
+	  //if(MAIN_GetMicros()>3e6)  speed = 4;
+	  //if(MAIN_GetMicros()>5e6)  HAL_TIM_Base_Stop_IT(&htim12);
+	 // MOTION_SetVelocity(0, 6);
+	  //speed += 0.005;
 
-
-	  MOTION_SetVelocity(0, speed);
-	  speed += 0.005;
-*/
 
 
 	  MOTION_Update();
 	  SENSORS_Update(); // 140 us
-	//  printf("%.3f, %.3f\r\n", SENSORS_angleVel, speed);
 
+	  // printf("%.3f, %.3f\r\n", SENSORS_angleVel, speed);
 
-	//  printf("%f, %f, %f\r\n", 100000*MOTOR_velocityController[0].U, MOTOR_velocityController[0].FB, 1000*MOTOR_currentController[0].FB );
-
-
+	  // printf("%f, %f\r\n", MOTOR_velocityController[0].FB, MOTOR_velocityController[1].FB);
 
 
 
-	  /*
-	  char x[64];
-	  uint8_t len = sprintf(x,"%.3f, %.3f, %.3f, %.3f \n\r",
-			  MOTOR_currentController[1].U,			// PWM
-			  MOTOR_currentController[1].FB*1000,  // mA
-			  MOTOR_velocityController[1].FB,		// Measured Velocity
-			  MOTOR_velocityController[1].W);		// req Velocity
-
-	  HAL_UART_Transmit(&huart3, (uint8_t*)x, len, 1000);
-*/
 
 
   } else if(htim->Instance == htim2.Instance)

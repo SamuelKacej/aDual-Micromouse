@@ -30,23 +30,6 @@ uint8_t CMD_AbsoluteRotToDirection(MAZE_ABSOLUTE_DIRECTION_T absR){
 	}
 	return -1;
 }
-void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS* abosoluteList, CMD_DIRECTIONS_T* relativeList, MAZE_ABSOLUTE_DIRECTION_T initRotation ){
-	// translate absolute direction made by floodfill to realative list
-	// reference direction will be direction from  previous cell
-
-	int8_t lastRotation = CMD_AbsoluteRotToDirection(initRotation);
-
-
-	for( uint16_t i = 0 ; i < MAZE_PATH_SIZE ; i++ ){
-
-		const int8_t dir =  CMD_DirectionMazeToCmd( abosoluteList[i].absoluteDirection);
-		relativeList[i] = CMD_DirectionRotate(dir, &lastRotation );
-
-		// TODO: add optional break after 3 STOP in row
-
-	}
-
-}
 
 uint8_t CMD_DirectionRotate(int8_t dir,	int8_t* rotation){
 
@@ -79,6 +62,64 @@ uint8_t CMD_DirectionRotate(int8_t dir,	int8_t* rotation){
 
 }
 
+void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS* abosoluteList, CMD_DIRECTIONS_T* relativeList, MAZE_ABSOLUTE_DIRECTION_T initRotation ){
+	// translate absolute direction made by floodfill to realative list
+	// reference direction will be direction from  previous cell
+
+	int8_t lastRotation = CMD_AbsoluteRotToDirection(initRotation);
+
+
+	for( uint16_t i = 0 ; i < MAZE_PATH_SIZE ; i++ ){
+
+		const int8_t dir =  CMD_DirectionMazeToCmd( abosoluteList[i].absoluteDirection);
+		relativeList[i] = CMD_DirectionRotate(dir, &lastRotation );
+
+		// TODO: add optional break after 3 STOP in row
+
+	}
+
+}
+
+
+
+CMD_WALLS_RELATIVE CMD_AbsoluteWallToRelative(uint8_t wallAbs, MAZE_ABSOLUTE_DIRECTION_T rotation){
+
+	// toto sa da prepisat na par riadkov
+
+	uint8_t wallRel = 0;
+	switch (rotation){
+		case ROT_SOUTH: // backward
+			wallRel |= (((wallAbs)>>0) &1) << 2; // south wall to north
+			wallRel |= (((wallAbs)>>1) &1) << 3; // east wall to west
+			wallRel |= (((wallAbs)>>3) &1) << 0; // north wall to south
+			wallRel |= (((wallAbs)>>4) &1) << 1; // west wall to east
+			break;
+		case ROT_EAST: // right
+			wallRel |= (((wallAbs)>>0) &1) << 1; // south wall to east
+			wallRel |= (((wallAbs)>>1) &1) << 2; // east wall to north
+			wallRel |= (((wallAbs)>>2) &1) << 3; // north wall to west
+			wallRel |= (((wallAbs)>>3) &1) << 0; // west wall to south
+			break;
+		case ROT_NORTH: // forward
+			wallRel = wallAbs;
+			break;
+		case ROT_WEST:
+			wallRel |= (((wallAbs)>>0) &1) << 3; // south wall to west
+			wallRel |= (((wallAbs)>>1) &1) << 0; // east wall to south
+			wallRel |= (((wallAbs)>>2) &1) << 1; // north wall to east
+			wallRel |= (((wallAbs)>>3) &1) << 2; // west wall to north
+			break;
+
+		default:
+			break;
+	}
+
+	return (CMD_WALLS_RELATIVE) wallRel;
+
+
+
+}
+
 uint8_t CMD_RelativeWallToAbsolute(CMD_WALLS_RELATIVE dirRel, MAZE_ABSOLUTE_DIRECTION_T rotation){
 	/*
 	 * transform relative
@@ -103,7 +144,6 @@ uint8_t CMD_RelativeWallToAbsolute(CMD_WALLS_RELATIVE dirRel, MAZE_ABSOLUTE_DIRE
 
 	uint8_t out = 0;
 
-	//sorry for this, i know it can be written more in pro style...
 	switch (rotation){
 		case ROT_SOUTH: // backward
 			out |= dirRel.WALL.right << 3;
@@ -130,6 +170,7 @@ uint8_t CMD_RelativeWallToAbsolute(CMD_WALLS_RELATIVE dirRel, MAZE_ABSOLUTE_DIRE
 	}
 	return out;
 }
+
 uint8_t CMD_DirectionMazeToCmd(uint8_t dir){
 // translate ABSOLUET maze coordinace to ABSOLUTE command cordinance
 	if(dir == 0x00) return CMD_S;//0
@@ -264,7 +305,7 @@ MAZE_ABSOLUTE_DIRECTION_T CMD_directionRotate8(MAZE_ABSOLUTE_DIRECTION_T orgRot,
 	 * rotIncr == East  :=  orgRot - 90  deg
 	 *
 	 * SE=(E, NE)
-	 */
+*/
 
 	int8_t org = CMD_dirToRot8(orgRot);
 	int8_t incr = CMD_dirToRot8(rotIncr);
@@ -273,8 +314,8 @@ MAZE_ABSOLUTE_DIRECTION_T CMD_directionRotate8(MAZE_ABSOLUTE_DIRECTION_T orgRot,
 	const int8_t finalRot = (12+org+incr)%8 - 4;
 	return CMD_rotToDir8(finalRot);
 }
-/*
- *
+
+ /*
  * --- Tato funkcia bola zakomentovane pretoze zapisovanie pozicie do CMD
  *  sa spravilo pomocou linkovania absPath > CMD ; abs path obsahuje cell a abs dir (NWSE)
  *  ak sa ukaze ze hetno linkovanie staci tato funkcia sa moze zmazat.
@@ -325,7 +366,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 	uint8_t x = 0;
 	uint8_t state = CMD_STATE_START;
 	uint8_t idx = 1;
-	uint8_t initPosOffset = CELL_DIMENSION/2;//mm
+	int16_t initPosOffset = CELL_DIMENSION/2;//mm
 
 	//cmdList[0].cellEnd = 0x00;
 	cmdList[0].dist = 0;
@@ -336,7 +377,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 
 	cmdList[0].cmd = CMD_STOP;
 	uint8_t prevIdx = 0;
-// TODO clear cmd list
+    // TODO clear cmd list
 
 	uint16_t iEnd =  MAZE_PATH_SIZE;// from this wale list wil be resete
 	for( uint16_t i = 0 ; i < MAZE_PATH_SIZE ; i++ ){
@@ -391,26 +432,27 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 						break;
 					case CMD_L:
 						cmdList[idx].dist = CELL_DIMENSION*x - initPosOffset;
-						initPosOffset = 0;
+						initPosOffset = 180;
 						cmdList[idx++].cmd = CMD_FWD0 +x;
 						state = CMD_STATE_ORTHO_L;
 						x = 0;
 						break;
 					case CMD_R:
 						cmdList[idx].dist = CELL_DIMENSION*x - initPosOffset;
-						initPosOffset = 0;
+						initPosOffset = 180;
 						cmdList[idx++].cmd = CMD_FWD0 +x;
 						state = CMD_STATE_ORTHO_R;
 						x = 0;
 						break;
 					case CMD_S:
 
-						if(initPosOffset>0){
-							 //you are in middle and you will stop in the middle
-							cmdList[idx].dist = CELL_DIMENSION*x;
-						}else{
+						if(initPosOffset!=0){
 							//you are at transition and you will stop in the middle
 							cmdList[idx].dist = CELL_DIMENSION*x -CELL_DIMENSION/2;
+
+						}else{
+							//you are in middle and you will stop in the middle
+							cmdList[idx].dist = CELL_DIMENSION*x;
 						}
 
    					    initPosOffset = 90;
@@ -496,7 +538,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 						state = CMD_STATE_DIAG_LR;
 						break;
 					case CMD_S:
-						cmdList[idx++].cmd = CMD_SS90SR; //explore?
+						cmdList[idx++].cmd = CMD_SS90SL; //explore?
 						cmdList[idx].dist = CELL_DIMENSION*1 - CELL_DIMENSION/2;
 						cmdList[idx++].cmd = CMD_FWD1;
 						state = CMD_STATE_STOP;

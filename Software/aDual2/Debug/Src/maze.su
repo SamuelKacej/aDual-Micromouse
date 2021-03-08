@@ -3,5 +3,6 @@ maze.c:50:6:MAZE_updatePath	16	static
 maze.c:55:6:MAZE_floodfill	56	static
 maze.c:127:9:MAZE_reverseDirection	16	static
 maze.c:140:12:MAZE_findCheapestNeighbor	32	static
-maze.c:194:6:MAZE_SetCostOfNeighbors	24	static
-maze.c:220:6:MAZE_ClearMaze	24	static
+maze.c:194:12:MAZE_getNeighbor	24	static
+maze.c:219:6:MAZE_SetCostOfNeighbors	24	static
+maze.c:245:6:MAZE_ClearMaze	24	static

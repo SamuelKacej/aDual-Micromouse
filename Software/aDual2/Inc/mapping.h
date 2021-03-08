@@ -17,8 +17,8 @@
 #include "usart.h"
 
 #define MAPPING_WALL_TRESHOLD_FRONT1 100 //mm - one of them must be less then this value
-#define MAPPING_WALL_TRESHOLD_FRONT2 110 //mm - second from the pair must be less then this value
-#define MAPPING_WALL_TRESHOLD_SIDE 82  //mm
+#define MAPPING_WALL_TRESHOLD_FRONT2 115 //mm - avearage value from both sensors mus be less the this value
+#define MAPPING_WALL_TRESHOLD_SIDE 95//85  //mm
 
 uint8_t MAPPING_isTimeToReadSideWall();
 

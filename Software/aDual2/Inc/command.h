@@ -176,13 +176,18 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T*, CMD_COMMAND*, MAZE_DIRECTIONS* );
 uint8_t CMD_DirectionMazeToCmd(uint8_t);
 
 uint8_t CMD_RelativeWallToAbsolute(CMD_WALLS_RELATIVE dirRel, uint8_t rotation);
+
 void CMD_AbsolutePathToRelative(MAZE_DIRECTIONS*, CMD_DIRECTIONS_T*, MAZE_ABSOLUTE_DIRECTION_T);
 
-uint8_t CMD_DirectionRotate(int8_t dir,	int8_t* rotation);
+//uint8_t CMD_DirectionRotate(int8_t dir,	int8_t* rotation);
 
 // clear command list
 void CMD_clearList();
 
 uint8_t CMD_AbsoluteRotToDirection(MAZE_ABSOLUTE_DIRECTION_T absR);
+
+CMD_WALLS_RELATIVE CMD_AbsoluteWallToRelative(uint8_t wallAbs, MAZE_ABSOLUTE_DIRECTION_T rotation);
+
+MAZE_ABSOLUTE_DIRECTION_T CMD_directionRotate8(MAZE_ABSOLUTE_DIRECTION_T orgRot, MAZE_ABSOLUTE_DIRECTION_T rotIncr);
 
 #endif /* COMMAND_H_ */

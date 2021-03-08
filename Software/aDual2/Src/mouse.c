@@ -61,7 +61,7 @@ uint8_t MOUSE_SearchRun( float avgVel, uint8_t startDest, const uint8_t finalDes
 	while(1){
 
 		 INSTR_CommandListIndex = 0; // TODO in future list wil be not reseted
-		 HAL_Delay(50);
+		 HAL_Delay(5);
 
 		 // search in map path to finish
 		 MAZE_updatePath(MOUSE_CellPosition, finalDest);
@@ -72,13 +72,13 @@ uint8_t MOUSE_SearchRun( float avgVel, uint8_t startDest, const uint8_t finalDes
 
 		 // list with instructions will be updated
 		 // from now robot starts moving
+		 CORR_CorenrFilterReset();
 		 MOTION_UpdateList();
 		 MOTION_instrID = 0;
 
 		 detectedWalls.wall = 0;
 		 do{
 
-			 //TODO : crash detection
 
 			 // writing walls
 			 if(MAPPING_isTimeToReadSideWall()){
@@ -90,20 +90,21 @@ uint8_t MOUSE_SearchRun( float avgVel, uint8_t startDest, const uint8_t finalDes
 
 			 // correct position to be parallel to the side walls
 			 if(CORR_isPositionForSideCorrection()){
-				 ACTUATOR_LED(0, 30, -1);
+
 				 CORR_ParallelToSide();
 			 }else{
-				 ACTUATOR_LED(0, 0, -1);
+
 			 }
 
+			 CORR_ForwardCorner();
 
-			 HAL_Delay(1);
+			 HAL_Delay(2);
 
 			 //caka kym sa vykona potrebny pocet komandov teda kym neprijde posledny stop
 			 //Pozor nie 1 instrukcia ale vsetky instrukcie daneho cmd
 			MOUSE_ChcekForNewComand();
 		 }while(INSTR_InstrListUsedInstr!=MOTION_instrID );
-
+		 ACTUATOR_LED(0, 0, 0);
 		 // read walls from logger, and reset logger
 		 detectedWalls.wall = MAPPING_LookForWalls(0b000);
 		 MAPPING_WriteWalls(detectedWalls, MOUSE_CellPosition, MOUSE_CellOrientation);
@@ -156,7 +157,13 @@ uint8_t MOUSE_SpeedRun( float avgVel, uint8_t startCell, uint8_t finalCell ){
 
 	 while(1){
 
-		 //TODO : crash detection
+		 // correct position to be parallel to the side walls
+		 if( CORR_isPositionForSideCorrection())
+			 CORR_ParallelToSide();
+
+		// CORR_ForwardCorner();
+
+		 HAL_Delay(2);
 		 MOUSE_ChcekForNewComand();
 
 		 //finish
@@ -250,12 +257,15 @@ uint8_t MOUSE_ChcekForNewComand(){
 	prevContinuance = currentInstruction->continuance;
 
 
-	if(cmdEnds)
-		MOUSE_UpdateAbsoluOrientation();
-	else if(currentInstruction->command->cmd == CMD_STOP)
+
+	if(cmdEnds){
+		CORR_CorenrFilterReset();
+		return MOUSE_UpdateAbsoluOrientation();
+
+	}else if(currentInstruction->command->cmd == CMD_STOP)
 		return 1;
 	else
-	     return 0;
+	    return 0;
 
 
 
@@ -335,17 +345,56 @@ uint8_t MOUSE_ChcekForNewComand(){
 	// In place turns
 
 }
-MOUSE_Test(){
+void MOUSE_Test(){
 
-	 MAZE_updatePath(0x00, 0x02);
-	 CMD_AbsolutePathToRelative( (MAZE_DIRECTIONS*) MAZE_path, CMD_directionList, MOUSE_CellOrientation);
-	 CMD_PathToCommand(CMD_directionList, CMD_commandList, (MAZE_DIRECTIONS*) MAZE_path);
+	MAZE_writeCell(MAZE_ADDR(0,0), 0b1011, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(0,1), 0b1010, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(0,3), 0b1100, 0xFF);
 
-	 MOTION_UpdateList();
-	 MOTION_instrID = 0;
+	MAZE_writeCell(MAZE_ADDR(1,0), 0b1001, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(1,1), 0b1100, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(1,2), 0b0101, 0xFF);
 
-	 // wait
-	 while(INSTR_InstrListUsedInstr!=MOTION_instrID );
+	MAZE_writeCell(MAZE_ADDR(2,0), 0b0101, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(2,1), 0b0101, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(2,2), 0b0101, 0xFF);
 
+	MAZE_writeCell(MAZE_ADDR(3,0), 0b0101, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(3,1), 0b0011, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(3,2), 0b0110, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(4,0), 0b0011, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(4,1), 0b1100, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(4,2), 0b1111, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(5,0), 0b1101, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(5,1), 0b0011, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(5,2), 0b1100, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(6,0), 0b0101, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(6,1), 0b1001, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(6,2), 0b0110, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(7,0), 0b0011, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(7,1), 0b0110, 0xFF);
+
+	/*  0 1 2 3 4 5 6 7
+	 *  _ _ _ _ _ _ _
+	 * |  _ _  |_|   |_
+	 * | |  _ _|  _|_  |
+	 * |_|_ _ _ _|_ _ _|
+	 */
+
+	HAL_Delay(1e3);
+
+	MOUSE_SpeedRun(1000, 0x00, 0x50);
+	HAL_Delay(1e3);
 
 };
+
+CMD_WALLS_RELATIVE MOUSE_GetRelativeWalls(){
+	// return relative walls from orientation of the mouse, of the end cell of current command
+	const uint8_t absWall = MOUSE_CURRENT_INSTR.command->path->cell->wall;
+	return CMD_AbsoluteWallToRelative(absWall, MOUSE_CellOrientation);
+
+}

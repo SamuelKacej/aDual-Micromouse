@@ -64,7 +64,9 @@ void INSTR_AddArc(INSTR_INSTRUCTION* insList, int16_t angleDeg, uint16_t radius,
 	 *
 	 */
 
-	//radius *= 1.3;//1.3 nie je to KRUH, ale OVAL
+	// nie je to KRUH, ale OVAL 1.3
+	//radius *= (radius == 0)? 1 : 1.1;
+
 
 	float angleRad = angleDeg*PI/180;
 	const float absAngleRad = (angleRad>=0)?angleRad:-angleRad;
@@ -136,7 +138,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 				// first and last instructions are empty
 
 				id++;
-				INSTR_AddArc(&insList[id], -45, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -45, 0, INSTR_AverageVelocity*2.5, &cmdList[*idc]);
 				id +=2;// 1 +1(empty)
 
 				break;
@@ -144,7 +146,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP45L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +45, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +45, 0, INSTR_AverageVelocity*2.5, &cmdList[*idc]);
 				id +=2;// 1 +1(empty)
 
 				break;
@@ -152,7 +154,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP90R:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], -90, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -90, 0, INSTR_AverageVelocity*2.5, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -160,7 +162,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP90L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +90, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +90, 0, INSTR_AverageVelocity*2.5, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -168,7 +170,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP135R:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], -135, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -135, 0, INSTR_AverageVelocity*2.5, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -176,7 +178,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP135L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +135, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +135, 0, INSTR_AverageVelocity*2.5, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -184,7 +186,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP180R:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], -180, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -180, 0, INSTR_AverageVelocity*2.5, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -192,7 +194,7 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 			case CMD_IP180L:
 				// first and last instructions are empty
 				id++;
-				INSTR_AddArc(&insList[id], +180, 0, INSTR_AverageVelocity*1.3, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], +180, 0, INSTR_AverageVelocity*2.5, &cmdList[*idc]);
 				id +=2;// 1(arc) +1(empty)
 
 				break;
@@ -200,79 +202,79 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 
 			//=========== TRANSITIONS ==============
 			case CMD_SS90SR:
-				INSTR_AddArc(&insList[id], -90, 90, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -90, 90*1.15, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SS90SL:
-				INSTR_AddArc(&insList[id], 90, 90, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 90, 90*1.15, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SS180R:
-				INSTR_AddArc(&insList[id], -180, 90, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -180, 90*1.1, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SS180L:
-				INSTR_AddArc(&insList[id], 180, 90, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 180, 90*1.1, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 
 			case CMD_SD45R:
-				INSTR_AddArc(&insList[id], -45, 83, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -45, 83*1.2, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SD45L:
-				INSTR_AddArc(&insList[id], 45, 83, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 45, 83*1.2, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SD135R:
-				INSTR_AddArc(&insList[id], -135, 76, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -135, 76*1.2, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_SD135L:
-				INSTR_AddArc(&insList[id], 135, 76, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 135, 76*1.2, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 
 			//--------------------------------------
 			case CMD_DS45R:
 				// diagonalna zatacka
-				INSTR_AddArc(&insList[id], -45, 83, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -45, 83*1.2, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_DS45L:
-				INSTR_AddArc(&insList[id], 45, 83, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 45, 83*1.2, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_DS135R:
 				//	https://www.desmos.com/calculator/frivebujta
-				INSTR_AddArc(&insList[id], -135, 76, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -135, 76*1.2, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_DS135L:
 				//	https://www.desmos.com/calculator/frivebujta
-				INSTR_AddArc(&insList[id], 135, 76, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 135, 76*1.2, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_DD90R:
 				// r = 45mm * sqrt(2)
-				INSTR_AddArc(&insList[id], -90, 64, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], -90, 64*1.2, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 			//--------------------------------------
 			case CMD_DD90L:
 				// r = 45mm * sqrt(2)
-				INSTR_AddArc(&insList[id], 90, 64, INSTR_AverageVelocity, &cmdList[*idc]);
+				INSTR_AddArc(&insList[id], 90, 64*1.2, INSTR_AverageVelocity, &cmdList[*idc]);
 				id++;
 				break;
 
@@ -347,7 +349,8 @@ uint16_t INSTR_CmdToInstr( CMD_COMMAND* cmdList, uint16_t* idc, INSTR_INSTRUCTIO
 				}else if(cmdList[*idc].cmd >=  CMD_DIA0 && cmdList[*idc].cmd <= CMD_DIA31){
 
 					// diagonal N centers of cell
-					const uint8_t nCells = cmdList[*idc].cmd - CMD_DIA0;
+					// Robot starts at one diagonal transition and ends at another so thats why -1
+					const uint8_t nCells = cmdList[*idc].cmd - CMD_DIA0 - 1;
 
 
 					// forward N borders of cell

@@ -28,7 +28,7 @@ uint8_t MAPPING_isTimeToReadFrontWall(){
 	// For now you detect walls only
 	if( INSTR_InstrList[MOTION_instrID].command->cmd == CMD_FWD1){
 			const uint8_t cont = INSTR_InstrList[MOTION_instrID].continuance ;
-			if( cont > 70 && cont < 95 ){
+			if( cont > 75 && cont < 99 ){
 				return 1;
 
 		}
@@ -59,56 +59,27 @@ uint8_t MAPPING_LookForWalls( uint8_t sensorSelect){
 	wall.wall = 0;
 
 	if(sensorSelect & 0b001){
-		/*sensorsDist[0] = sensorsDist[0] + (SENSORS_irDistance[0]-sensorsDist[0])/k_filterCoeficient;
-		sensorsDist[5] = sensorsDist[5] + (SENSORS_irDistance[5]-sensorsDist[5])/k_filterCoeficient;
 
-		if((sensorsDist[0]+sensorsDist[5])/2 < MAPPING_WALL_TRESHOLD_FRONT)
-			wall.WALL.front = 1;
-		*/
 		sensorsDist[0] += SENSORS_irDistance[0];
 		sensorsDist[5] += SENSORS_irDistance[5];
 		callCnt[0]++;
 		callCnt[5]++;
-
-
 	}
-	if(sensorSelect & 0b010){
-		/*
-		sensorsDist[1] = sensorsDist[1] + (SENSORS_irDistance[1]-sensorsDist[1])/k_filterCoeficient;
-		sensorsDist[4] = sensorsDist[4] + (SENSORS_irDistance[4]-sensorsDist[4])/k_filterCoeficient;
 
-		// right
-		if(sensorsDist[1] < MAPPING_WALL_TRESHOLD_SIDE)
-			wall.WALL.right = 1;
-		//left
-		if(sensorsDist[4] < MAPPING_WALL_TRESHOLD_SIDE)
-			wall.WALL.left = 1;
-			*/
+	if(sensorSelect & 0b010){
+
 		sensorsDist[1] += SENSORS_irDistance[1];
 		sensorsDist[4] += SENSORS_irDistance[4];
 		callCnt[1]++;
 		callCnt[4]++;
-
-
 	}
-	if(sensorSelect & 0b100){
-		/*
-		sensorsDist[2] = sensorsDist[2] + (SENSORS_irDistance[3]-sensorsDist[2])/k_filterCoeficient;
-		sensorsDist[3] = sensorsDist[3] + (SENSORS_irDistance[2]-sensorsDist[3])/k_filterCoeficient;
 
-		// right
-		if(sensorsDist[2] < MAPPING_WALL_TRESHOLD_SIDE)
-			wall.WALL.right = 1;
-		//left
-		if(sensorsDist[3] < MAPPING_WALL_TRESHOLD_SIDE)
-			wall.WALL.left = 1;
-			*/
+	if(sensorSelect & 0b100){
+
 		sensorsDist[2] += SENSORS_irDistance[2];
 		sensorsDist[3] += SENSORS_irDistance[3];
 		callCnt[2]++;
 		callCnt[3]++;
-
-
 	}
 
 	// reset
@@ -138,13 +109,14 @@ uint8_t MAPPING_LookForWalls( uint8_t sensorSelect){
 			fwdAvgR = sensorsDist[0]/callCnt[0];
 			fwdAvgL = sensorsDist[5]/callCnt[5];
 
-			if(fwdAvgL < MAPPING_WALL_TRESHOLD_FRONT1 && fwdAvgR < MAPPING_WALL_TRESHOLD_FRONT2 )
+
+			// One of them must have lower value then treshold_1 and average from both must be lower treshold_2
+			if(fwdAvgL < MAPPING_WALL_TRESHOLD_FRONT1 && (fwdAvgL+fwdAvgR)/2 < MAPPING_WALL_TRESHOLD_FRONT2 )
 				wall.WALL.front = 1;
-			if(fwdAvgR < MAPPING_WALL_TRESHOLD_FRONT1 && fwdAvgL < MAPPING_WALL_TRESHOLD_FRONT2 )
+			if(fwdAvgR < MAPPING_WALL_TRESHOLD_FRONT1 && (fwdAvgL+fwdAvgR)/2 < MAPPING_WALL_TRESHOLD_FRONT2 )
 				wall.WALL.front = 1;
 		}
 
-		//printf("%u, %u, %u, %u \r\n", leftAvg, fwdAvgL, fwdAvgR, rightAvg);
 
 		sensorsDist[0] = 0;
 		sensorsDist[1] = 0;

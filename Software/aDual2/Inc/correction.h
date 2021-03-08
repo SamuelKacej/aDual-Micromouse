@@ -20,8 +20,19 @@
 
 
 
-#define CORR_DISTANCE_FROM_WALL 53 // keep this distance from L/R wall
+#define CORR_DISTANCE_FROM_WALL 56 // keep this distance from L/R wall
 
+// when you see front wall in less then TRESHOLD, then travel just REMAINING_DIST
+#define CORR_FWD_FRONT_TRESHOLD 80
+#define CORR_FWD_FRONT_REMAINING_DIST 40
+
+// default value at start of the filter
+#define CORR_CORNER_DEFAULT_VAL 120
+#define CORR_CORNER_LONG_COEF 15
+#define CORR_CORNER_SHORT_COEF 5
+
+#define CORR_CORNER_TRESHOLD 90
+#define CORR_CORNER_REMAINING_DIST 115
 
 void CORR_PrepareToStart();
 
@@ -38,5 +49,11 @@ void CORR_Diagonal();
 void CORR_CorrectionRotation();
 
 uint8_t CORR_FindCornerInRotation();
+
+void CORR_CorenrFilterReset();
+
+void CORR_InPlace90R(uint16_t);
+
+void CORR_InPlace90L(uint16_t);
 
 #endif /* CORRECTION_H_ */

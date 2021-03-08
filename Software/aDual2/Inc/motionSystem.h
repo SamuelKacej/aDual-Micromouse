@@ -63,6 +63,8 @@ void MOTION_MoveInstrId();
 
 void MOTION_inPlaceRotation(int);
 
+void MOTION_CrashDetection();
+
 INSTR_INSTRUCTION* MOTION_GetNextInstruction(uint8_t idOffset);
 
 uint8_t MOTION_instrID;		// points to actual instraction

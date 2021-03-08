@@ -9,6 +9,11 @@
 
 #define _ABS(x) ( ((x)<0)? -x: x )
 
+uint8_t gWallFilterRightLong = 10;
+uint8_t gWallFilterRightShort = 10;
+uint8_t gWallFilterLeftLong = 10;
+uint8_t gWallFilterLeftShort = 10;
+uint8_t gCorrAlreadyDone = 0;
 
 uint8_t CORR_FindCornerInRotation(){
 	// this function will tell if robot will in future turn to right/left
@@ -44,9 +49,14 @@ uint8_t CORR_FindCornerInRotation(){
 
 }
 
-
+void CORR_CorenrFilterReset(){
+	gWallFilterLeftLong = CORR_CORNER_DEFAULT_VAL;
+	gWallFilterLeftShort = CORR_CORNER_DEFAULT_VAL;
+	gWallFilterRightLong = CORR_CORNER_DEFAULT_VAL;
+	gWallFilterRightShort = CORR_CORNER_DEFAULT_VAL;
+	gCorrAlreadyDone = 0;
+}
 void CORR_ForwardCorner(){
-	//TODO
 	/*
 	 * Ak na dokoncenie FWD ti zostave menej ako 150mm
 	 * 	pozri sa do mapy ci mas na jednej strane stenu (nesmie byt prazdna)
@@ -54,6 +64,81 @@ void CORR_ForwardCorner(){
 	 * 			ked nastane nastav INSTR->EndDist = CONST
 	 * 			nastav slowDown o ten rozdiel o ktory to posunies (treba preratat na %)
 	 * */
+
+	if(gCorrAlreadyDone > 0){
+		return;
+	}
+
+
+	// is current instr FWD?
+	if(MOUSE_CURRENT_INSTR.command->cmd >= CMD_FWD0 && MOUSE_CURRENT_INSTR.command->cmd <= CMD_FWD15){
+
+		// remaining distance till end of instruction
+		const float remainingDistance = MOUSE_CURRENT_INSTR.distEnd - SENSORS_transPos;// [mm]
+
+
+		// are you in last 80mm?
+		if( remainingDistance < 80){
+
+			// ------------- is in map front wall? TODO
+			if(1 || MOUSE_GetRelativeWalls().WALL.front ){ // during search run you might not know if there is wall
+
+				const uint8_t frontDistance = (SENSORS_irDistance[0]+SENSORS_irDistance[5])/2;
+
+				// make sure distance is filtered
+				if(frontDistance < CORR_FWD_FRONT_TRESHOLD && frontDistance > CORR_FWD_FRONT_REMAINING_DIST){
+					MOUSE_CURRENT_INSTR.distEnd = SENSORS_transPos + CORR_FWD_FRONT_REMAINING_DIST;
+					gCorrAlreadyDone = 1;
+					ACTUATOR_LED(0, 0, 150);
+					printf("F %f \t%u \r\n", remainingDistance, frontDistance);
+				}
+			}
+		}
+
+
+
+		// TODO is there previos wall?
+		// corrner
+		if(remainingDistance > 35 && remainingDistance < 180){
+			// ------------- is there non right wall?
+
+			if( !MOUSE_GetRelativeWalls().WALL.right ){
+
+				gWallFilterRightLong  += (SENSORS_irDistance[2] - gWallFilterRightLong ) / CORR_CORNER_LONG_COEF;
+				gWallFilterRightShort += (SENSORS_irDistance[2] - gWallFilterRightShort) / CORR_CORNER_SHORT_COEF;
+
+				if(gWallFilterRightLong < CORR_CORNER_TRESHOLD && gWallFilterRightShort > CORR_CORNER_TRESHOLD){
+					const float stopsAtCorrner = (remainingDistance > 170)? +90: +0;//extra 90mm if you want end cmd at transition of the cells
+					MOUSE_CURRENT_INSTR.distEnd = stopsAtCorrner +  SENSORS_transPos + CORR_CORNER_REMAINING_DIST;
+					gCorrAlreadyDone = 1;
+					ACTUATOR_LED(0, 150, 0);
+
+					//printf("R %f \t%u \r\n", remainingDistance, gWallFilterRightShort);
+
+				}
+
+			}
+
+
+			// ------------- isn't in map left wall?
+			if( !MOUSE_GetRelativeWalls().WALL.left ){
+
+
+				gWallFilterLeftLong  += (SENSORS_irDistance[3] - gWallFilterLeftLong ) / CORR_CORNER_LONG_COEF;
+				gWallFilterLeftShort += (SENSORS_irDistance[3] - gWallFilterLeftShort) / CORR_CORNER_SHORT_COEF;
+
+				if(gWallFilterLeftLong < CORR_CORNER_TRESHOLD && gWallFilterLeftShort > CORR_CORNER_TRESHOLD){
+					const float stopsAtCorrner = (remainingDistance > 170)? +90: +0;//extra 90mm if you want end cmd at transition of the cells
+					MOUSE_CURRENT_INSTR.distEnd = stopsAtCorrner +  SENSORS_transPos + CORR_CORNER_REMAINING_DIST;
+					gCorrAlreadyDone = 1;
+					ACTUATOR_LED(150, 0, 0);
+				}
+
+			 }
+		 }
+
+
+	}
 }
 void CORR_PrepareToStart(){
 
@@ -62,8 +147,79 @@ void CORR_PrepareToStart(){
 	 * Funkcia sa narovna na stred bunky, 4x ( sa otoci sa o 90deg a zarovna )
 	 * staci sa zarovnat na protilahlu stenu pri kazdej otocke, netreba podla bocnych stie
 	 * sucasne korekcia vo viacercyh osiach potlaci vpliv rotacneho vychylenia
+	 *
+	 * Na konci musi mat robot orientaciu na North
 	 */
 
+	if(MOUSE_CellPosition == 0x00){ // mouse is in start cell
+
+		//in start cell you must have 3 walls in shape of U
+
+		const uint8_t walls = MAZE_maze[0].wall;
+
+		for(uint8_t i=0 ; i<4 ; i++){
+			if(MOUSE_CellOrientation & walls){ // is there wall?
+				CORR_PerpendicularToForward();
+			}else{
+				break;
+			}
+			CORR_InPlace90R(800);
+		}
+	}
+
+
+
+}
+
+
+void CORR_InPlace90L(uint16_t avgVel){
+	// This fcn rotate robot 90deg to the left  in place
+
+	INSTR_ResetInstrList(INSTR_InstrList, INSTR_LIST_SIZE);
+	MOTION_instrID = 0;
+
+	int id = 0;
+	MOTION_resetList(id);
+	id++;
+
+	INSTR_AddArc(&insList[id], -90, 0, avgVel, CMD_IP90L);
+	id++;
+
+	MOTION_resetList(id);
+	id++;
+
+	INSTR_InstrListUsedInstr = 3;
+
+	while(INSTR_InstrListUsedInstr!=MOTION_instrID)
+		;// wait
+
+	MOUSE_CellOrientation = CMD_directionRotate8(MOUSE_CellOrientation,(MAZE_ABSOLUTE_DIRECTION_T) 0b0010);
+
+
+}
+
+void CORR_InPlace90R(uint16_t avgVel){
+	// This fcn rotate robot 90deg to the left  in place
+
+	INSTR_ResetInstrList(INSTR_InstrList, INSTR_LIST_SIZE);
+	MOTION_instrID = 0;
+
+	int id = 0;
+	MOTION_resetList(id);
+	id++;
+
+	INSTR_AddArc(&insList[id], 90, 0, avgVel, CMD_IP90L);
+	id++;
+
+	MOTION_resetList(id);
+	id++;
+
+	INSTR_InstrListUsedInstr = id;
+
+	while(INSTR_InstrListUsedInstr!=MOTION_instrID)
+		;// wait
+
+	MOUSE_CellOrientation = CMD_directionRotate8(MOUSE_CellOrientation,(MAZE_ABSOLUTE_DIRECTION_T) 0b1000);
 
 }
 
@@ -76,6 +232,8 @@ void CORR_PerpendicularToForward(){
 	float prevTransError = 0;
 	float prevAngleError = 0;
 
+	const uint32_t startTime = MAIN_GetMicros();
+
 	do{
 		const uint8_t distL = SENSORS_irDistance[5];
 		const uint8_t distR = SENSORS_irDistance[0];
@@ -83,17 +241,21 @@ void CORR_PerpendicularToForward(){
 		transError = (distL+distR)/2 - reqDistFromWall;
 		angleError = -(distL-distR); // 0  is req
 
-		float transVel = 1.0/1  *(5*transError + 2*(transError - prevTransError));
-		float angleVel = 1.0/30 *(0.5*angleError + 0.05*(angleError - prevAngleError));
+		float transVel = 1.2  *(5*transError + 2*(transError - prevTransError));
+		float angleVel = 1.0/10 *(angleError + 0.1*(angleError - prevAngleError));
 
 		// saturation
-		transVel = (transVel > 30)? 30 : ( (transVel < -30) ? -30 : transVel);
+		transVel = (transVel > 50)? 50 : ( (transVel < -50) ? -50 : transVel);
 		angleVel = (angleVel > 6)? 6 : ( (angleVel < -6) ? -6 : angleVel);
 
 		MOTION_ExternalTransCorrection = transVel;
 		MOTION_ExternalAngCorrection   = angleVel;
 
 		HAL_Delay(1);
+
+		// do correction max 500ms
+		if(startTime+5e5 < MAIN_GetMicros())
+			break;
 
 	}while( _ABS(transError) > 5 || _ABS(angleError) > 3 );
 
@@ -114,13 +276,14 @@ void CORR_ParallelToSide(){
 	const uint8_t disL = SENSORS_irDistance[3];
 
 
+	//printf("> %u %u \r\n", disL, disR);
 
 	//static uint32_t prevTime = 0;
-	//static int8_t orientationErrorPrev = 0;
+	static int8_t orientationErrorPrev = 0;
 	int8_t error = 0;
 
 
-	const uint8_t distanceFromWall = 65; //mm
+	const uint8_t distanceFromWall = 90; //mm
 	if( disR < distanceFromWall && disL < distanceFromWall){
 		error = disL - disR;
 	}else if(disR < distanceFromWall){
@@ -129,18 +292,17 @@ void CORR_ParallelToSide(){
 		error = disL - CORR_DISTANCE_FROM_WALL;
 	}
 
-	/*
-	char s[30];
-	const uint8_t len = sprintf(s, "%u, \t%u, \t%i, \t%.3f \r\n",disL, disR, error, MOTION_ExternalAngCorrection );
-	HAL_UART_Transmit(&huart3, (uint8_t*)s, len, 1000);
-	*/
-	const uint32_t time = MAIN_GetMicros();
-	//const float D_component = ((float)(error - orientationErrorPrev))/(time - prevTime) *1e6;
-	const float angleVel = (float)error/53.0 ;//+ 5e-4*D_component;
 
-	MOTION_ExternalAngCorrection = (angleVel > 3)? 3 : ( (angleVel < -3) ? -3 : angleVel);
+	//const uint32_t time = MAIN_GetMicros();							time
+	const float D_component = ((float)(error - orientationErrorPrev))/(2.5e-3) ;
+	const float angleVel = (float)error/20.0 + 5e-4*D_component;
 
-	//orientationErrorPrev = error;
+
+	// saturation
+	const float max = 5;
+	MOTION_ExternalAngCorrection = (angleVel > max)? max : ( (angleVel < -max) ? -max : angleVel);
+
+	orientationErrorPrev = error;
 	//prevTime = time;
 }
 
@@ -148,16 +310,18 @@ uint8_t CORR_isPositionForSideCorrection(){
 
 	if( MOUSE_CURRENT_INSTR.command->cmd == CMD_FWD1){
 		const uint8_t cont = MOUSE_CURRENT_INSTR.continuance ;
-		if( (cont > 20 && cont < 30) || (cont > 60 && cont < 70) ){
+		if( (cont > 5 && cont < 18) || (cont > 55 && cont < 75) ){
 			return 1;
 		}
+	}else if(MOUSE_CURRENT_INSTR.command->cmd > CMD_FWD1 && MOUSE_CURRENT_INSTR.command->cmd <= CMD_FWD15){
+		return 1;
 	}
 	return 0;
 
 }
 
 void CORR_CorrectionRotation(){
-	// TODO: Correction with front or side wall
+	// TODO: Correction with front or side wall during rotation
 }
 
 void CORR_Diagonal(){

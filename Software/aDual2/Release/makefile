@@ -48,8 +48,8 @@ aDual2.bin \
 all: aDual2.elf secondary-outputs
 
 # Tool invocations
-aDual2.elf: $(OBJS) $(USER_OBJS) C:\Users\samok\Documents\GitHub\aDual-Micromouse\Software\aDual2\STM32F405RGTX_FLASH.ld
-	arm-none-eabi-gcc -o "aDual2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\samok\Documents\GitHub\aDual-Micromouse\Software\aDual2\STM32F405RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="aDual2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+aDual2.elf: $(OBJS) $(USER_OBJS) C:\Users\samok\Documents\GitHub\aDual-Micromouse\aDual-Micromouse\Software\aDual2\STM32F405RGTX_FLASH.ld
+	arm-none-eabi-gcc -o "aDual2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\samok\Documents\GitHub\aDual-Micromouse\aDual-Micromouse\Software\aDual2\STM32F405RGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="aDual2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

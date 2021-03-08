@@ -164,7 +164,7 @@ MAZE_CELL* MAZE_findCheapestNeighbor(MAZE_CELL* mazeCell, uint8_t* direction){
 	}
 
 	if (addrX+1 < MAZE_SIZE_X){
-		tmp = mazeCell + MAZE_SIZE_X;//*sizeof(MAZE_CELL); // [addrX+1][addrY];
+		tmp = mazeCell + MAZE_SIZE_Y;//*sizeof(MAZE_CELL); // [addrX+1][addrY];
 		if( (mazeCell->wall & 0b0010)==0 && tmp->cost < resoult->cost ){
 			resoult = tmp;
 			*direction = 0b10;
@@ -180,7 +180,7 @@ MAZE_CELL* MAZE_findCheapestNeighbor(MAZE_CELL* mazeCell, uint8_t* direction){
 	}
 
 	if (addrX-1 >=0){
-		tmp = mazeCell - MAZE_SIZE_X;//*sizeof(MAZE_CELL); // [addrX-1][addrY];
+		tmp = mazeCell - MAZE_SIZE_Y;//*sizeof(MAZE_CELL); // [addrX-1][addrY];
 		if( (mazeCell->wall & 0b1000)==0 && tmp->cost < resoult->cost ){
 			resoult = tmp;
 			*direction = 0b1000;
@@ -189,6 +189,31 @@ MAZE_CELL* MAZE_findCheapestNeighbor(MAZE_CELL* mazeCell, uint8_t* direction){
 
 	return resoult;
 
+}
+
+MAZE_CELL* MAZE_getNeighbor(MAZE_CELL* mazeCell, MAZE_ABSOLUTE_DIRECTION_T direction){
+	//@mazeCell - pointer to maze cell
+	//@direction - direction to the retuned cell from @mazeCell
+	// fcn returns pointer to  set  cell, if there is no cell return null
+	const int8_t X = (mazeCell->address & 0xF0)>>4;
+	const int8_t Y =  mazeCell->address & 0x0F;
+
+
+	switch(direction){
+	case ROT_NULL:  return mazeCell;
+
+	case ROT_SOUTH: return (Y-1 >= 0)? mazeCell-1: NULL;
+	case ROT_EAST:  return (X+1 < MAZE_SIZE_X)? mazeCell + MAZE_SIZE_Y: NULL;
+	case ROT_NORTH: return (Y+1 < MAZE_SIZE_Y)? mazeCell+1: NULL;
+	case ROT_WEST:  return (X-1 >= 0)? mazeCell-1: NULL;
+
+	case ROT_SE: return (Y-1 >= 0 && X+1 < MAZE_SIZE_X)? mazeCell-1+ MAZE_SIZE_Y: NULL;
+	case ROT_NE: return (Y+1 < MAZE_SIZE_Y && X+1 < MAZE_SIZE_X )?mazeCell + MAZE_SIZE_Y +1: NULL;
+	case ROT_NW: return (Y-1 >= 0)? mazeCell-1: NULL;
+	case ROT_SW: return (Y-1 >= 0)? mazeCell-1: NULL;
+	default: return NULL;
+
+	}
 }
 
 void MAZE_SetCostOfNeighbors(MAZE_CELL* maze, uint8_t addr){
