@@ -99,6 +99,8 @@ typedef enum{
 
 typedef struct
 {
+
+
 	uint8_t wall; 	// b0000 DCBA   // todo change to  MAZE_CELL_WALLS
 				 	// wall of the cell
 
@@ -108,6 +110,7 @@ typedef struct
 					// MAZE_SIZE_X * actualX  + actualY // 0xXY
 					// |y
 					// |__ __ x
+	uint8_t written;
 	/*    4
 	  ┌───C───┐
 	  │       │

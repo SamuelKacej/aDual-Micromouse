@@ -68,6 +68,7 @@ typedef struct _INSTRUCTION_{
 		float	distEnd; 	// mm, distance at the end of instruction
 
 
+
 	// ROTATION
 
 		// sinusoidal movement
@@ -85,7 +86,11 @@ typedef struct _INSTRUCTION_{
 		uint8_t slowDownCont; // continuance at which it start deaccelereting (-accel)
 							  //if cont>slowDownCont? accel = -accel
 
+		float 	synchInstrDist;
+
 		struct _INSTRUCTION_* next;
+		struct _INSTRUCTION_* previous;
+
 
 }INSTR_INSTRUCTION;
 
@@ -113,7 +118,7 @@ void INSTR_AddArc(\
 		int16_t angleDeg,\
 		uint16_t radius,\
 		uint16_t transVelocity,\
-		CMD_COMMAND* command );
+		CMD_COMMAND* command, float);
 
 
 

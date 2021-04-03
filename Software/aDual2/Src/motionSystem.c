@@ -19,7 +19,7 @@ void MOTION_Init(float tP,float tI,float tD,float aP,float aI,float aD){
 	 INSTR_VelocityPeak	 	= 1500;	// mm/s , < 1000 ; 3500 > Translational
 	 INSTR_AverageVelocity 	= 500; 	// mm/s , <  250 ; 1500 > Translational
 
-	 INSTR_MaxTransAccel 	= 5000;	// mm/s    1 g =~ 9807mm/s
+	 INSTR_MaxTransAccel 	= 6000;	// mm/s    1 g =~ 9807mm/s
 
 	 INSTR_MaxAngVelocity 	= 2*PI;	// rad/s
 
@@ -228,22 +228,33 @@ void MOTION_StepVelocity(INSTR_INSTRUCTION* instr, float* transVel, float* angul
 		*angularVel = 0; // rotation is not allowed
 
 		instr->continuance = 100*(SENSORS_transPos - instr->distBegin)/ instr->dist;
+		static uint8_t prevContinuance = 50;
 
+
+		static float speedUpCNT = 0;
 		static float slowDownCNT = 0;
-		//speed up
 
+		if(prevContinuance > instr->continuance){
+			// new instruction was detected
+			speedUpCNT = SENSORS_transVel;
+			slowDownCNT = 0;
+		}
+		prevContinuance = instr->continuance;
+
+		//speed up
 		if(instr->continuance <= instr->slowDownCont){
 			// time instance is used as counter.
 			// TODO time sa musi vynulovat?
-			instr->time +=  MOTION_uTimePeriod*(1e-6);
-			*transVel = instr->accel * instr->time;// vzdy to pojde od 0-to je trocha zle
+			speedUpCNT += instr->accel * MOTION_uTimePeriod*(1e-6);// vzdy to pojde od 0-to je trocha zle //iba troska??, trocha vela
+			*transVel  = speedUpCNT;
 
-			// overshoot protection
+					// overshoot protection
 			if(instr->accel > 0 && *transVel > instr->speed)
 				*transVel = instr->speed;
 			if(instr->accel < 0 && *transVel < instr->speed)
 				*transVel = instr->speed;
 			slowDownCNT = 0;
+
 		}else{// slow down if requested
 			slowDownCNT +=  MOTION_uTimePeriod*(1e-6);
 			*transVel =  instr->speed - instr->accel * slowDownCNT;
@@ -295,7 +306,7 @@ void MOTION_ChcekForNewInstraction(){ // updated
 
 
 	// translational movement
-	if( insList[MOTION_instrID].speed != 0 && distTrans >= insList[MOTION_instrID].distEnd) //+ distReserv)
+	if( insList[MOTION_instrID].speed != 0 && distTrans >= insList[MOTION_instrID].distEnd + insList[MOTION_instrID].synchInstrDist)
 		NewInstraction = 1;
 
 	// anti-clockwise
@@ -450,7 +461,7 @@ void MOTION_SetVelocity(float transV, float angularV){
 	MOTOR_ControllerUpdate(&MOTION_angularController, angularV, SENSORS_angleVel, MAIN_GetMicros());
 	MOTOR_ControllerUpdate(&MOTION_translationController, transV, SENSORS_transVel, MAIN_GetMicros());
 
-	//printf("%f, %f, %f, %f \r\n", 100*MOTION_angularController.FB, 100*angularV, 100*MOTION_angularController.U, transV);
+	printf("%f, %f, %f, %f \r\n", SENSORS_transVel, transV, MOTION_angularController, angularV);
 
 
 	// Tieto vzorce su spravne nerozmyslaj uz nad tym - su dobre da sa to dokazat, ta dvojka tam ma byt! -Samo z minulosti
@@ -474,7 +485,7 @@ void MOTION_inPlaceRotation(int angleDeg){
 	MOTION_resetList(id);
 	id++;
 
-	INSTR_AddArc(&insList[id], angleDeg, 0, vel, CMD_SD135R);
+	INSTR_AddArc(&insList[id], angleDeg, 0, vel, CMD_SD135R, 0);
 	id++;
 
 	MOTION_resetList(id);

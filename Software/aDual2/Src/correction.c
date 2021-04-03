@@ -14,6 +14,8 @@ uint8_t gWallFilterRightShort = 10;
 uint8_t gWallFilterLeftLong = 10;
 uint8_t gWallFilterLeftShort = 10;
 uint8_t gCorrAlreadyDone = 0;
+int16_t gPrevWallFilterLeftDiff = 0;
+int16_t gPrevWallFilterRightDiff = 0;
 
 uint8_t CORR_FindCornerInRotation(){
 	// this function will tell if robot will in future turn to right/left
@@ -54,6 +56,9 @@ void CORR_CorenrFilterReset(){
 	gWallFilterLeftShort = CORR_CORNER_DEFAULT_VAL;
 	gWallFilterRightLong = CORR_CORNER_DEFAULT_VAL;
 	gWallFilterRightShort = CORR_CORNER_DEFAULT_VAL;
+
+	gPrevWallFilterLeftDiff = 0;
+	gPrevWallFilterRightDiff = 0;
 	gCorrAlreadyDone = 0;
 }
 void CORR_ForwardCorner(){
@@ -68,7 +73,10 @@ void CORR_ForwardCorner(){
 	if(gCorrAlreadyDone > 0){
 		return;
 	}
-
+	// if next CMD is fwd dont do correction
+	if(MOUSE_CURRENT_INSTR.next->command->cmd >= CMD_FWD0 && MOUSE_CURRENT_INSTR.next->command->cmd <= CMD_FWD15){
+		return;
+	}
 
 	// is current instr FWD?
 	if(MOUSE_CURRENT_INSTR.command->cmd >= CMD_FWD0 && MOUSE_CURRENT_INSTR.command->cmd <= CMD_FWD15){
@@ -90,7 +98,7 @@ void CORR_ForwardCorner(){
 					MOUSE_CURRENT_INSTR.distEnd = SENSORS_transPos + CORR_FWD_FRONT_REMAINING_DIST;
 					gCorrAlreadyDone = 1;
 					ACTUATOR_LED(0, 0, 150);
-					printf("F %f \t%u \r\n", remainingDistance, frontDistance);
+					printf("UPDATE F %u ; rem %f\r\n", CORR_FWD_FRONT_REMAINING_DIST, remainingDistance);
 				}
 			}
 		}
@@ -99,23 +107,26 @@ void CORR_ForwardCorner(){
 
 		// TODO is there previos wall?
 		// corrner
-		if(remainingDistance > 35 && remainingDistance < 180){
+		if(remainingDistance > 5 && remainingDistance < 130){
 			// ------------- is there non right wall?
+
+
 
 			if( !MOUSE_GetRelativeWalls().WALL.right ){
 
 				gWallFilterRightLong  += (SENSORS_irDistance[2] - gWallFilterRightLong ) / CORR_CORNER_LONG_COEF;
 				gWallFilterRightShort += (SENSORS_irDistance[2] - gWallFilterRightShort) / CORR_CORNER_SHORT_COEF;
+				const int16_t filterDiff = (int16_t)gWallFilterRightLong - (int16_t)gWallFilterRightShort;
 
-				if(gWallFilterRightLong < CORR_CORNER_TRESHOLD && gWallFilterRightShort > CORR_CORNER_TRESHOLD){
-					const float stopsAtCorrner = (remainingDistance > 170)? +90: +0;//extra 90mm if you want end cmd at transition of the cells
-					MOUSE_CURRENT_INSTR.distEnd = stopsAtCorrner +  SENSORS_transPos + CORR_CORNER_REMAINING_DIST;
+				if(gPrevWallFilterRightDiff > 0 && filterDiff<0){
+					const uint8_t stopsAtCenter = (MOUSE_CURRENT_INSTR.next->command->cmd == CMD_STOP)? +90: +0; //extra 90mm if you want end cmd at transition of the cells
+					MOUSE_CURRENT_INSTR.distEnd = stopsAtCenter +  SENSORS_transPos + CORR_CORNER_REMAINING_DIST;
 					gCorrAlreadyDone = 1;
 					ACTUATOR_LED(0, 150, 0);
-
-					//printf("R %f \t%u \r\n", remainingDistance, gWallFilterRightShort);
-
+					printf("UPDATE R %u ; rem %f\r\n", stopsAtCenter+CORR_CORNER_REMAINING_DIST, remainingDistance);
 				}
+				gPrevWallFilterRightDiff = filterDiff;
+
 
 			}
 
@@ -126,13 +137,18 @@ void CORR_ForwardCorner(){
 
 				gWallFilterLeftLong  += (SENSORS_irDistance[3] - gWallFilterLeftLong ) / CORR_CORNER_LONG_COEF;
 				gWallFilterLeftShort += (SENSORS_irDistance[3] - gWallFilterLeftShort) / CORR_CORNER_SHORT_COEF;
+				const int16_t filterDiff = (int16_t)gWallFilterLeftLong - (int16_t)gWallFilterLeftShort;
 
-				if(gWallFilterLeftLong < CORR_CORNER_TRESHOLD && gWallFilterLeftShort > CORR_CORNER_TRESHOLD){
-					const float stopsAtCorrner = (remainingDistance > 170)? +90: +0;//extra 90mm if you want end cmd at transition of the cells
-					MOUSE_CURRENT_INSTR.distEnd = stopsAtCorrner +  SENSORS_transPos + CORR_CORNER_REMAINING_DIST;
+
+
+				if(gPrevWallFilterLeftDiff > 0 && filterDiff<0){
+					const uint8_t stopsAtCenter = (MOUSE_CURRENT_INSTR.next->command->cmd == CMD_STOP)? +90: +0;//extra 90mm if you want end cmd at transition of the cells
+					MOUSE_CURRENT_INSTR.distEnd = stopsAtCenter +  SENSORS_transPos + CORR_CORNER_REMAINING_DIST;
+					printf("UPDATE L %u ; rem %f\r\n", stopsAtCenter+CORR_CORNER_REMAINING_DIST, remainingDistance);
 					gCorrAlreadyDone = 1;
 					ACTUATOR_LED(150, 0, 0);
 				}
+				gPrevWallFilterLeftDiff = (filterDiff == 0)? gPrevWallFilterLeftDiff : filterDiff; // there can by only + or -
 
 			 }
 		 }
@@ -182,7 +198,7 @@ void CORR_InPlace90L(uint16_t avgVel){
 	MOTION_resetList(id);
 	id++;
 
-	INSTR_AddArc(&insList[id], -90, 0, avgVel, CMD_IP90L);
+	INSTR_AddArc(&insList[id], -90, 0, avgVel, CMD_IP90L, 0);
 	id++;
 
 	MOTION_resetList(id);
@@ -208,7 +224,7 @@ void CORR_InPlace90R(uint16_t avgVel){
 	MOTION_resetList(id);
 	id++;
 
-	INSTR_AddArc(&insList[id], 90, 0, avgVel, CMD_IP90L);
+	INSTR_AddArc(&insList[id], 90, 0, avgVel, CMD_IP90L, 0);
 	id++;
 
 	MOTION_resetList(id);

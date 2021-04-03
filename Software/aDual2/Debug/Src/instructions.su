@@ -3,5 +3,5 @@ instructions.c:38:7:INSTR_CalcAccel	16	static
 instructions.c:45:7:INSTR_CalcDist	24	static
 instructions.c:51:7:INSTR_CalcVel	24	static
 instructions.c:55:6:INSTR_AddArc	48	static
-instructions.c:103:10:INSTR_CmdToInstr	64	static
-instructions.c:429:6:INSTR_ResetInstrList	24	static
+instructions.c:105:10:INSTR_CmdToInstr	64	static
+instructions.c:431:6:INSTR_ResetInstrList	24	static

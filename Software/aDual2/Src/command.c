@@ -446,7 +446,7 @@ void CMD_PathToCommand(CMD_DIRECTIONS_T* pathList, CMD_COMMAND* cmdList, MAZE_DI
 						break;
 					case CMD_S:
 
-						if(initPosOffset!=0){
+						if(initPosOffset==0){
 							//you are at transition and you will stop in the middle
 							cmdList[idx].dist = CELL_DIMENSION*x -CELL_DIMENSION/2;
 

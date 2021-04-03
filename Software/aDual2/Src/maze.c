@@ -12,6 +12,9 @@ uint8_t MAZE_wasChanged  = 0;
 
 void MAZE_writeCell(uint8_t address, uint8_t walls, uint8_t cost){
 
+	if(MAZE_maze[address].written == 1)
+		return;
+
 	if(MAZE_maze[address].wall != walls){
 
 		MAZE_maze[address].wall = walls;
@@ -40,6 +43,8 @@ void MAZE_writeCell(uint8_t address, uint8_t walls, uint8_t cost){
 		}
 
 		MAZE_wasChanged = 1;
+
+		MAZE_maze[address].written = 1;
 
 	}
 	if( cost != 0xFF){
@@ -254,6 +259,7 @@ void MAZE_ClearMaze(MAZE_CELL* maze){
 			maze[MAZE_ADDR(i,j)].cost = 0;
 			maze[MAZE_ADDR(i,j)].wall = 0;
 			maze[MAZE_ADDR(i,j)].address = MAZE_ADDR(i,j);
+			maze[MAZE_ADDR(i,j)].written = 0;
 
 			// borders
 			if( i == 0)

@@ -185,23 +185,31 @@ int main(void)
   SENSORS_Init();
   ACTUATOR_Init();
 
-  MAZE_ClearMaze(MAZE_maze); //odstranil som &
+  // INIT is ok
+  ACTUATOR_LED(200, 0, 0);
+  HAL_Delay(200);
+  ACTUATOR_LED(0, 0, 0);
+
+
+
+  MAZE_ClearMaze(MAZE_maze);
   CMD_clearList();
 
   // INIT CONTROLLERS
 
   // INIT PERIODIC TIMMERS
 
-  HAL_Delay(1500);
+  HAL_Delay(500);
 
   MOTOR_INIT();
   MAIN_SetPIDs();
-  HAL_TIM_Base_Start_IT(&htim12);// 5ms periodic timmer for controller update
+  HAL_TIM_Base_Start_IT(&htim12);// 2.5ms periodic timmer for controller update
+
+   ACTUATOR_LED(0, 120, 0);
+   HAL_Delay(200);
+   ACTUATOR_LED(0, 0, 0);
 
 
-
-
-  HAL_Delay(30);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -252,15 +260,22 @@ int main(void)
 
 	  MOUSE_Test();
 
-/*
- * 	  MOUSE_SearchRun(500, 0x00, 0x21);
+
+ 	  MOUSE_SearchRun(500, 0x00, 0x62);
+	  HAL_Delay(500);
+
+	  MOUSE_SearchRun(450.0, MOUSE_CellPosition, 0x00);
+	  HAL_Delay(3500);
+
+	  MOUSE_SpeedRun(1200.0, MOUSE_CellPosition, 0x62);
+
 	  HAL_Delay(500);
 
 	  MOUSE_SearchRun(450.0, MOUSE_CellPosition, 0x00);
 	  HAL_Delay(500);
 
-	  MOUSE_SpeedRun(700.0, MOUSE_CellPosition, 0x21);
-*/
+	  MOUSE_SpeedRun(1200.0, MOUSE_CellPosition, 0x62);
+
 
 	//  HAL_TIM_Base_Stop_IT(&htim12);
 	  MOTOR_SetVoltage(1, 0);

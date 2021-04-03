@@ -1,8 +1,8 @@
 maze.c:13:6:MAZE_writeCell	24	static
-maze.c:50:6:MAZE_updatePath	16	static
-maze.c:55:6:MAZE_floodfill	56	static
-maze.c:127:9:MAZE_reverseDirection	16	static
-maze.c:140:12:MAZE_findCheapestNeighbor	32	static
-maze.c:194:12:MAZE_getNeighbor	24	static
-maze.c:219:6:MAZE_SetCostOfNeighbors	24	static
-maze.c:245:6:MAZE_ClearMaze	24	static
+maze.c:55:6:MAZE_updatePath	16	static
+maze.c:60:6:MAZE_floodfill	56	static
+maze.c:132:9:MAZE_reverseDirection	16	static
+maze.c:145:12:MAZE_findCheapestNeighbor	32	static
+maze.c:199:12:MAZE_getNeighbor	24	static
+maze.c:224:6:MAZE_SetCostOfNeighbors	24	static
+maze.c:250:6:MAZE_ClearMaze	24	static

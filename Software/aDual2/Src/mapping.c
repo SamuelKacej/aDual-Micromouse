@@ -74,14 +74,16 @@ uint8_t MAPPING_LookForWalls( uint8_t sensorSelect){
 		callCnt[4]++;
 	}
 
-	if(sensorSelect & 0b100){
+	if(SENSORS_irDistance[0] > 20 && SENSORS_irDistance[5] >5){
+		//side sensors can measure only if front distance is more then 20mm
+		if(sensorSelect & 0b100){
 
-		sensorsDist[2] += SENSORS_irDistance[2];
-		sensorsDist[3] += SENSORS_irDistance[3];
-		callCnt[2]++;
-		callCnt[3]++;
+			sensorsDist[2] += SENSORS_irDistance[2];
+			sensorsDist[3] += SENSORS_irDistance[3];
+			callCnt[2]++;
+			callCnt[3]++;
+		}
 	}
-
 	// reset
 	if(sensorSelect == 0){
 
@@ -145,21 +147,27 @@ void MAPPING_WriteWallsToMaze(uint8_t wallid, uint8_t position, MAZE_ABSOLUTE_DI
 }
 
 uint8_t MAPPING_WriteWalls(CMD_WALLS_RELATIVE wall, uint8_t pos, MAZE_ABSOLUTE_DIRECTION_T absOrientation){
+	// returns 0 if walls were writen and 1 if they are not writen
 
+	const uint8_t alreadyWritten = MAZE_maze[pos].written;
 	//right
-	if( wall.wall & 2)
+	if( wall.wall & 2){
+		MAZE_maze[pos].written = alreadyWritten;
 		MAPPING_WriteWallsToMaze(2, pos, absOrientation);
+	}
 
 	//front
-	if(wall.wall & 4)
+	if(wall.wall & 4){
+		MAZE_maze[pos].written = alreadyWritten;
 		MAPPING_WriteWallsToMaze(4, pos, absOrientation);
-
+	}
 	//left
-	if( wall.wall & 8)
+	if( wall.wall & 8){
+		MAZE_maze[pos].written = alreadyWritten;
 		MAPPING_WriteWallsToMaze(8, pos, absOrientation);
+	}
 
-	//TODO: return if was wall writen in the cell
-	return 0;
+	return 	alreadyWritten;
 
 }
 

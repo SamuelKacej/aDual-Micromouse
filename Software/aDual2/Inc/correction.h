@@ -28,11 +28,11 @@
 
 // default value at start of the filter
 #define CORR_CORNER_DEFAULT_VAL 120
-#define CORR_CORNER_LONG_COEF 15
+#define CORR_CORNER_LONG_COEF 30
 #define CORR_CORNER_SHORT_COEF 5
 
-#define CORR_CORNER_TRESHOLD 90
-#define CORR_CORNER_REMAINING_DIST 115
+#define CORR_CORNER_TRESHOLD 120
+#define CORR_CORNER_REMAINING_DIST 10
 
 void CORR_PrepareToStart();
 

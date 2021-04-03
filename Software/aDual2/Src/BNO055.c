@@ -30,7 +30,7 @@ void bno055_write8(I2C_HandleTypeDef* hi2c1, bno055_reg_t reg, uint8_t data)
 
 	uint16_t packet = ((uint16_t)data << 8) | reg;
 
-	 HAL_StatusTypeDef ret = HAL_I2C_Master_Transmit(hi2c1, deviceAddress<<1, &packet, 2, HAL_MAX_DELAY);
+	 HAL_StatusTypeDef ret = HAL_I2C_Master_Transmit(hi2c1, deviceAddress<<1, &packet, 2, 100);
     if ( ret != HAL_OK ) {
             printf("I2C error.\n\r");
     }

@@ -104,6 +104,8 @@ uint8_t MOUSE_SearchRun( float avgVel, uint8_t startDest, const uint8_t finalDes
 			 //Pozor nie 1 instrukcia ale vsetky instrukcie daneho cmd
 			MOUSE_ChcekForNewComand();
 		 }while(INSTR_InstrListUsedInstr!=MOTION_instrID );
+		 ACTUATOR_LED(60, 100, 0);
+		 HAL_Delay(10);
 		 ACTUATOR_LED(0, 0, 0);
 		 // read walls from logger, and reset logger
 		 detectedWalls.wall = MAPPING_LookForWalls(0b000);
@@ -161,7 +163,14 @@ uint8_t MOUSE_SpeedRun( float avgVel, uint8_t startCell, uint8_t finalCell ){
 		 if( CORR_isPositionForSideCorrection())
 			 CORR_ParallelToSide();
 
-		// CORR_ForwardCorner();
+		 if(MOTION_instrID % 2){
+			 ACTUATOR_LED(0, 180, 10);
+		 }else{
+			 ACTUATOR_LED(100, 0, 200);
+		 }
+
+
+		 CORR_ForwardCorner();
 
 		 HAL_Delay(2);
 		 MOUSE_ChcekForNewComand();
@@ -169,9 +178,11 @@ uint8_t MOUSE_SpeedRun( float avgVel, uint8_t startCell, uint8_t finalCell ){
 		 //finish
 		 if(     MOUSE_CellPosition == finalCell){
 
+
 			 ACTUATOR_LED(-1, -1, 200);
 			 HAL_Delay(1000);
 			 ACTUATOR_LED(-1, -1, 0);
+			 CORR_PerpendicularToForward();
 			 break;
 		 }
 
@@ -186,31 +197,89 @@ uint8_t MOUSE_ReturnToStart( float avgVel ){
 	 *
 	 */
 
-	MAZE_updatePath(MOUSE_CellPosition, 0x00);
-	CMD_AbsolutePathToRelative((MAZE_DIRECTIONS*)MAZE_path, CMD_directionList, MOUSE_CellOrientation);
-	CMD_PathToCommand(CMD_directionList, CMD_commandList, (MAZE_DIRECTIONS*)MAZE_path);
-
-	INSTR_AverageVelocity = avgVel;
-	MOUSE_PrepareToStart();
-
-	while(1){
-
-		MOTION_UpdateList();
-		MOUSE_ChcekForNewComand();
+		INSTR_AverageVelocity = avgVel;
+		uint8_t finalDest = 0;
 
 
-		//u are at the start
-		if(MOUSE_CellPosition == 0x00 ){
-
-			ACTUATOR_LED(-1, -1, 200);
-			HAL_Delay(1500);
-			ACTUATOR_LED(-1, -1, 0);
-			break;
+		// detect around walls at the start
+		CMD_WALLS_RELATIVE detectedWalls ;
+		for(uint8_t i = 0; i<35; i++){
+			detectedWalls.wall =  MAPPING_LookForWalls(0b111);
 		 }
+		detectedWalls.wall = MAPPING_LookForWalls(0b000);
+		MAPPING_WriteWalls(detectedWalls, MOUSE_CellPosition, MOUSE_CellOrientation);
 
-	 }
 
-	return 0;
+		while(1){
+
+			 INSTR_CommandListIndex = 0; // TODO in future list wil be not reseted
+			 HAL_Delay(5);
+
+			 // search in map path to finish
+			 MAZE_updatePath(MOUSE_CellPosition, finalDest);
+			 MAZE_updatePath(MOUSE_CellPosition, MAZE_path[1].cell->address); // move just one cell
+			 CMD_AbsolutePathToRelative( (MAZE_DIRECTIONS*) MAZE_path, CMD_directionList, MOUSE_CellOrientation);
+			 CMD_PathToCommand(CMD_directionList, CMD_commandList, (MAZE_DIRECTIONS*) MAZE_path);
+
+
+			 // list with instructions will be updated
+			 // from now robot starts moving
+			 CORR_CorenrFilterReset();
+			 MOTION_UpdateList();
+			 MOTION_instrID = 0;
+
+			 detectedWalls.wall = 0;
+			 do{
+
+
+				 // writing walls
+				 if(MAPPING_isTimeToReadSideWall()){
+					 detectedWalls.wall |= 0b1010 & MAPPING_LookForWalls(0b100);
+				 }
+				 if(MAPPING_isTimeToReadFrontWall()){
+					 detectedWalls.wall |= 0b0100 & MAPPING_LookForWalls(0b001);
+				 }
+
+				 // correct position to be parallel to the side walls
+				 if(CORR_isPositionForSideCorrection()){
+
+					 CORR_ParallelToSide();
+				 }else{
+
+				 }
+
+				 CORR_ForwardCorner();
+
+				 HAL_Delay(2);
+
+				 //caka kym sa vykona potrebny pocet komandov teda kym neprijde posledny stop
+				 //Pozor nie 1 instrukcia ale vsetky instrukcie daneho cmd
+				MOUSE_ChcekForNewComand();
+			 }while(INSTR_InstrListUsedInstr!=MOTION_instrID );
+			 ACTUATOR_LED(60, 100, 0);
+			 HAL_Delay(10);
+			 ACTUATOR_LED(0, 0, 0);
+			 // read walls from logger, and reset logger
+			 detectedWalls.wall = MAPPING_LookForWalls(0b000);
+			 MAPPING_WriteWalls(detectedWalls, MOUSE_CellPosition, MOUSE_CellOrientation);
+
+			 // if there is front wall correct to it
+			 if(detectedWalls.wall & 0b0100 ){
+				 ACTUATOR_LED(150, -1, -1);
+				 CORR_PerpendicularToForward();
+				 ACTUATOR_LED(0, -1, -1);
+			 }
+
+			 MAPPING_PrintMaze(MOUSE_CellPosition);
+
+			 if( MOUSE_CellPosition == finalDest ){
+
+				 ACTUATOR_LED(-1, -1, 200);
+				 HAL_Delay(1000);
+				 ACTUATOR_LED(-1, -1, 0);
+				 break;
+			 }
+		}
 }
 
 uint8_t MOUSE_UpdateAbsoluOrientation(){
@@ -345,6 +414,7 @@ uint8_t MOUSE_ChcekForNewComand(){
 	// In place turns
 
 }
+/*
 void MOUSE_Test(){
 
 	MAZE_writeCell(MAZE_ADDR(0,0), 0b1011, 0xFF);
@@ -378,19 +448,73 @@ void MOUSE_Test(){
 	MAZE_writeCell(MAZE_ADDR(7,0), 0b0011, 0xFF);
 	MAZE_writeCell(MAZE_ADDR(7,1), 0b0110, 0xFF);
 
-	/*  0 1 2 3 4 5 6 7
+	 *  0 1 2 3 4 5 6 7
 	 *  _ _ _ _ _ _ _
 	 * |  _ _  |_|   |_
 	 * | |  _ _|  _|_  |
 	 * |_|_ _ _ _|_ _ _|
-	 */
+	 *
 
 	HAL_Delay(1e3);
 
-	MOUSE_SpeedRun(1000, 0x00, 0x50);
+	MOUSE_SpeedRun(1200, 0x00, 0x50);
+	HAL_Delay(1e3);
+
+};*/
+
+
+void MOUSE_Test(){
+
+	MAZE_writeCell(MAZE_ADDR(0,0), 0b1011, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(0,1), 0b1100, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(0,2), 0b1111, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(1,0), 0b1001, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(1,1), 0b0110, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(1,2), 0b1111, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(2,0), 0b0101, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(2,1), 0b1001, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(2,2), 0b1100, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(3,0), 0b0101, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(3,1), 0b0101, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(3,2), 0b0101, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(4,0), 0b0011, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(4,1), 0b0110, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(4,2), 0b0101, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(5,0), 0b1001, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(5,1), 0b1010, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(5,2), 0b0110, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(6,0), 0b0001, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(6,1), 0b0110, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(6,2), 0b1101, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(7,0), 0b0101, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(7,1), 0b1001, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(7,2), 0b0110, 0xFF);
+
+	MAZE_writeCell(MAZE_ADDR(8,0), 0b0011, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(8,1), 0b0110, 0xFF);
+	MAZE_writeCell(MAZE_ADDR(8,2), 0b1111, 0xFF);
+	/*  0 1 2 3 4 5 6 7 8
+	 *  _ _ _ _ _ _ _ _ _
+	 * |_ _|  _ _  |_  |_|
+	 * |   |_ _  | | |_  |
+	 * |_|_ _ _ _|_ _ _ _|
+	 */
+
+	MAPPING_PrintMaze(0);
+	HAL_Delay(1e3);
+
+	MOUSE_SpeedRun(1000, 0x00, 0x62);
 	HAL_Delay(1e3);
 
 };
+
 
 CMD_WALLS_RELATIVE MOUSE_GetRelativeWalls(){
 	// return relative walls from orientation of the mouse, of the end cell of current command
